@@ -26,4 +26,20 @@
             <label lang="de-DE">Modell (optional)</label>
         </input-field>
     </card>
+    <card>
+        <title>ContentFlow AI Search</title>
+        <title lang="de-DE">ContentFlow KI-Suche</title>
+        <input-field type="bool">
+            <name>searchEnabled</name>
+            <label>Replace storefront search</label>
+            <label lang="de-DE">Storefront-Suche ersetzen</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+        <input-field type="bool">
+            <name>assistantEnabled</name>
+            <label>Enable shopping assistant</label>
+            <label lang="de-DE">Einkaufsberater aktivieren</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+    </card>
 </config>

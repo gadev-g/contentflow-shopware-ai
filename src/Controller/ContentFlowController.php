@@ -6,12 +6,10 @@ namespace ContentFlow\ShopwareAi\Controller;
 
 use ContentFlow\ShopwareAi\Service\ContentFlowClient;
 use Doctrine\DBAL\Connection;
-use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\Routing\ApiRouteScope;
-use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,116 +23,6 @@ final class ContentFlowController extends AbstractController
         private readonly EntityRepository $productRepository,
         private readonly Connection $connection,
     ) {
-    }
-
-    #[Route('/api/_action/contentflow/coverage', name: 'api.action.contentflow.coverage', methods: ['POST'])]
-    public function coverage(Request $request): JsonResponse
-    {
-        $data = $request->toArray();
-        $languageId = $data['languageId'] ?? Defaults::LANGUAGE_SYSTEM;
-
-        if (!\is_string($languageId) || !Uuid::isValid($languageId)) {
-            return new JsonResponse(['error' => ['message' => 'A valid languageId is required.']], 422);
-        }
-
-        $liveVersion = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
-        $systemLanguage = Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
-        $selectedLanguage = Uuid::fromHexToBytes($languageId);
-
-        $summary = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT
-                    LOWER(HEX(language.id)) AS id,
-                    locale.code,
-                    (
-                        SELECT COUNT(*)
-                        FROM product
-                        WHERE product.version_id = :liveVersion
-                            AND product.parent_id IS NULL
-                    ) AS totalProducts,
-                    (
-                        SELECT COUNT(*)
-                        FROM product
-                        INNER JOIN product_translation
-                            ON product_translation.product_id = product.id
-                            AND product_translation.product_version_id = product.version_id
-                            AND product_translation.language_id = language.id
-                        WHERE product.version_id = :liveVersion
-                            AND product.parent_id IS NULL
-                            AND NULLIF(TRIM(product_translation.name), '') IS NOT NULL
-                            AND NULLIF(TRIM(product_translation.description), '') IS NOT NULL
-                    ) AS translatedProducts,
-                    (
-                        SELECT COUNT(*)
-                        FROM product
-                        INNER JOIN product_translation
-                            ON product_translation.product_id = product.id
-                            AND product_translation.product_version_id = product.version_id
-                            AND product_translation.language_id = language.id
-                        WHERE product.version_id = :liveVersion
-                            AND product.parent_id IS NULL
-                            AND NULLIF(TRIM(product_translation.meta_title), '') IS NOT NULL
-                            AND NULLIF(TRIM(product_translation.meta_description), '') IS NOT NULL
-                    ) AS seoProducts,
-                    (SELECT COUNT(*) FROM media) AS totalMedia,
-                    (
-                        SELECT COUNT(*)
-                        FROM media
-                        INNER JOIN media_translation
-                            ON media_translation.media_id = media.id
-                            AND media_translation.language_id = language.id
-                        WHERE NULLIF(TRIM(media_translation.alt), '') IS NOT NULL
-                            AND NULLIF(TRIM(media_translation.title), '') IS NOT NULL
-                    ) AS describedMedia
-                FROM language
-                INNER JOIN locale ON locale.id = language.locale_id
-                ORDER BY locale.code
-                SQL,
-            ['liveVersion' => $liveVersion],
-        );
-
-        $products = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT
-                    LOWER(HEX(product.id)) AS id,
-                    product.product_number AS productNumber,
-                    COALESCE(NULLIF(TRIM(product_translation.name), ''), system_translation.name, product.product_number) AS name,
-                    CASE
-                        WHEN NULLIF(TRIM(product_translation.name), '') IS NOT NULL
-                            AND NULLIF(TRIM(product_translation.description), '') IS NOT NULL
-                        THEN 1 ELSE 0
-                    END AS translated,
-                    CASE
-                        WHEN NULLIF(TRIM(product_translation.meta_title), '') IS NOT NULL
-                            AND NULLIF(TRIM(product_translation.meta_description), '') IS NOT NULL
-                        THEN 1 ELSE 0
-                    END AS seoComplete
-                FROM product
-                LEFT JOIN product_translation
-                    ON product_translation.product_id = product.id
-                    AND product_translation.product_version_id = product.version_id
-                    AND product_translation.language_id = :selectedLanguage
-                LEFT JOIN product_translation system_translation
-                    ON system_translation.product_id = product.id
-                    AND system_translation.product_version_id = product.version_id
-                    AND system_translation.language_id = :systemLanguage
-                WHERE product.version_id = :liveVersion
-                    AND product.parent_id IS NULL
-                ORDER BY translated ASC, seoComplete ASC, name ASC
-                LIMIT 100
-                SQL,
-            [
-                'liveVersion' => $liveVersion,
-                'selectedLanguage' => $selectedLanguage,
-                'systemLanguage' => $systemLanguage,
-            ],
-        );
-
-        return new JsonResponse([
-            'languageId' => $languageId,
-            'summary' => $summary,
-            'products' => $products,
-        ]);
     }
 
     #[Route('/api/_action/contentflow/connection', name: 'api.action.contentflow.connection', methods: ['POST'])]
@@ -332,6 +220,138 @@ final class ContentFlowController extends AbstractController
         $this->productRepository->update($updates, $context);
 
         return new JsonResponse(['saved' => \count($updates)]);
+    }
+
+    #[Route('/api/_action/contentflow/coverage', name: 'api.action.contentflow.coverage', methods: ['GET'])]
+    public function coverage(Request $request): JsonResponse
+    {
+        $languageId = preg_replace('/[^a-f0-9]/i', '', (string) $request->query->get('languageId'));
+
+        if (32 !== \strlen($languageId)) {
+            return new JsonResponse(['error' => ['message' => 'Select a valid target language.']], 422);
+        }
+
+        $summary = $this->connection->fetchAssociative(
+            <<<'SQL'
+                SELECT
+                    COUNT(DISTINCT p.id) AS total,
+                    COUNT(DISTINCT CASE WHEN NULLIF(TRIM(pt.name), '') IS NOT NULL THEN p.id END) AS translated,
+                    COUNT(DISTINCT CASE WHEN NULLIF(TRIM(pt.meta_title), '') IS NOT NULL AND NULLIF(TRIM(pt.meta_description), '') IS NOT NULL THEN p.id END) AS seo_complete
+                FROM product p
+                LEFT JOIN product_translation pt ON pt.product_id = p.id AND pt.product_version_id = p.version_id AND pt.language_id = UNHEX(?)
+                WHERE p.parent_id IS NULL
+                SQL,
+            [$languageId],
+        ) ?: [];
+        $media = $this->connection->fetchAssociative(
+            <<<'SQL'
+                SELECT
+                    COUNT(DISTINCT m.id) AS total,
+                    COUNT(DISTINCT CASE WHEN NULLIF(TRIM(mt.alt), '') IS NOT NULL THEN m.id END) AS with_alt
+                FROM media m
+                LEFT JOIN media_translation mt ON mt.media_id = m.id AND mt.language_id = UNHEX(?)
+                SQL,
+            [$languageId],
+        ) ?: [];
+        $missing = $this->connection->fetchAllAssociative(
+            <<<'SQL'
+                SELECT LOWER(HEX(p.id)) AS id, p.product_number, COALESCE(pt.name, '') AS name,
+                    CASE WHEN NULLIF(TRIM(pt.name), '') IS NULL THEN 0 ELSE 1 END AS translated,
+                    CASE WHEN NULLIF(TRIM(pt.meta_title), '') IS NOT NULL AND NULLIF(TRIM(pt.meta_description), '') IS NOT NULL THEN 1 ELSE 0 END AS seo_complete
+                FROM product p
+                LEFT JOIN product_translation pt ON pt.product_id = p.id AND pt.product_version_id = p.version_id AND pt.language_id = UNHEX(?)
+                WHERE p.parent_id IS NULL
+                  AND (NULLIF(TRIM(pt.name), '') IS NULL OR NULLIF(TRIM(pt.meta_title), '') IS NULL OR NULLIF(TRIM(pt.meta_description), '') IS NULL)
+                ORDER BY p.product_number ASC
+                LIMIT 10
+                SQL,
+            [$languageId],
+        );
+
+        return new JsonResponse([
+            'products' => [
+                'total' => (int) ($summary['total'] ?? 0),
+                'translated' => (int) ($summary['translated'] ?? 0),
+                'seo_complete' => (int) ($summary['seo_complete'] ?? 0),
+            ],
+            'media' => [
+                'total' => (int) ($media['total'] ?? 0),
+                'with_alt' => (int) ($media['with_alt'] ?? 0),
+            ],
+            'missing' => $missing,
+        ]);
+    }
+
+    #[Route('/api/_action/contentflow/search/sync', name: 'api.action.contentflow.search.sync', methods: ['POST'])]
+    public function syncSearchCatalog(Request $request, Context $context): JsonResponse
+    {
+        $data = $request->toArray();
+        $criteria = (new Criteria())
+            ->addAssociation('manufacturer')
+            ->addAssociation('categories')
+            ->addAssociation('properties.group');
+        $products = $this->productRepository->search($criteria, $context);
+        $documents = [];
+
+        foreach ($products as $product) {
+            if (null !== $product->getParentId()) {
+                continue;
+            }
+
+            $categories = [];
+            foreach ($product->getCategories() ?? [] as $category) {
+                $categories[] = (string) $category->getTranslation('name');
+            }
+            $attributes = [];
+            foreach ($product->getProperties() ?? [] as $property) {
+                $group = $property->getGroup();
+                $attributes[(string) ($group?->getTranslation('name') ?? 'Property')][] = (string) $property->getTranslation('name');
+            }
+
+            $documents[] = [
+                'id' => $product->getId(),
+                'title' => (string) $product->getTranslation('name'),
+                'description' => strip_tags((string) $product->getTranslation('description')),
+                'category' => implode(' ', array_filter($categories)),
+                'manufacturer' => (string) ($product->getManufacturer()?->getTranslation('name') ?? ''),
+                'product_number' => $product->getProductNumber(),
+                'keywords' => array_values(array_filter(array_map('trim', explode(',', (string) $product->getTranslation('keywords'))))),
+                'attributes' => $attributes,
+                'active' => $product->getActive(),
+            ];
+        }
+
+        $result = $this->client->post('/api/v1/integrations/shopware/search/catalog', [
+            'sales_channel_id' => \is_string($data['salesChannelId'] ?? null) ? $data['salesChannelId'] : 'default',
+            'language' => \is_string($data['language'] ?? null) ? $data['language'] : $context->getLanguageId(),
+            'documents' => $documents,
+        ]);
+
+        return new JsonResponse($result, 202);
+    }
+
+    #[Route('/api/_action/contentflow/search/analytics', name: 'api.action.contentflow.search.analytics', methods: ['GET'])]
+    public function searchAnalytics(): JsonResponse
+    {
+        return new JsonResponse($this->client->get('/api/v1/integrations/shopware/search/analytics'));
+    }
+
+    #[Route('/api/_action/contentflow/search/test', name: 'api.action.contentflow.search.test', methods: ['POST'])]
+    public function testSearch(Request $request): JsonResponse
+    {
+        return new JsonResponse($this->client->post('/api/v1/integrations/shopware/search', $request->toArray(), 0.6));
+    }
+
+    #[Route('/api/_action/contentflow/search/rules', name: 'api.action.contentflow.search.rules', methods: ['POST'])]
+    public function saveSearchRule(Request $request): JsonResponse
+    {
+        return new JsonResponse($this->client->post('/api/v1/integrations/shopware/search/rules', $request->toArray()), 201);
+    }
+
+    #[Route('/api/_action/contentflow/search/rules/{id}', name: 'api.action.contentflow.search.rules.delete', methods: ['DELETE'])]
+    public function deleteSearchRule(string $id): JsonResponse
+    {
+        return new JsonResponse($this->client->delete('/api/v1/integrations/shopware/search/rules/' . rawurlencode($id)));
     }
 
     /** @return list<string> */

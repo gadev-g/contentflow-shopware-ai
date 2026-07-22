@@ -11,8 +11,8 @@ export default {
     data() {
         return {
             selectedProducts: new EntityCollection('/product', 'product', Shopware.Context.api),
+            selectedRuleProducts: new EntityCollection('/product', 'product', Shopware.Context.api),
             availableLanguages: new EntityCollection('/language', 'language', Shopware.Context.api),
-            categoryId: '',
             sourceLanguageId: '',
             targetLanguageId: '',
             sourceLanguage: 'de',
@@ -21,14 +21,21 @@ export default {
             providerOptions: [],
             preview: null,
             seoPreview: null,
-            coverage: null,
             languagesLoading: false,
-            coverageLoading: false,
             providersLoading: false,
             providerSaving: false,
             loading: false,
             seoLoading: false,
             saving: false,
+            searchLoading: false,
+            searchSyncing: false,
+            searchAnalytics: null,
+            searchQuery: '',
+            searchTest: null,
+            searchRule: { name: '', type: 'pin', query: '', product_ids: [], priority: 100, active: true },
+            searchRuleSynonyms: '',
+            coverage: null,
+            coverageLoading: false,
         };
     },
     computed: {
@@ -39,34 +46,14 @@ export default {
             const criteria = new Criteria(1, 50);
             criteria.addFilter(Criteria.equals('parentId', null));
             criteria.addSorting(Criteria.sort('name', 'ASC'));
-            criteria.addAssociation('cover.media');
-
-            if (this.categoryId) {
-                criteria.addFilter(Criteria.equals('categories.id', this.categoryId));
-            }
-
-            return criteria;
-        },
-        categoryRepository() {
-            return this.repositoryFactory.create('category');
-        },
-        categoryCriteria() {
-            const criteria = new Criteria(1, 100);
-            criteria.addSorting(Criteria.sort('name', 'ASC'));
 
             return criteria;
         },
         languageRepository() {
             return this.repositoryFactory.create('language');
         },
-        currentCoverage() {
-            return this.coverage?.summary?.find((item) => item.id === this.targetLanguageId) || null;
-        },
     },
     watch: {
-        categoryId() {
-            this.selectedProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
-        },
         sourceLanguageId() {
             this.sourceLanguage = this.localeCodeForLanguage(this.sourceLanguageId, 'de');
         },
@@ -78,14 +65,27 @@ export default {
     created() {
         this.loadLanguages();
         this.loadProviderSettings();
+        this.loadSearchAnalytics();
     },
     methods: {
+        apiRequestConfig() {
+            return {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${Shopware.Service('loginService').getToken()}`,
+                    'Content-Type': 'application/json',
+                    'sw-language-id': Shopware.Context.api.languageId,
+                },
+            };
+        },
         async loadProviderSettings() {
             this.providersLoading = true;
 
             try {
                 const response = await Shopware.Application.getContainer('init').httpClient.post(
                     '/_action/contentflow/connection',
+                    {},
+                    this.apiRequestConfig(),
                 );
 
                 this.providerOptions = (response.data.providers || []).map((provider) => ({
@@ -106,6 +106,7 @@ export default {
                 await Shopware.Application.getContainer('init').httpClient.post(
                     '/_action/contentflow/settings/provider',
                     { provider: this.provider },
+                    this.apiRequestConfig(),
                 );
                 this.createNotificationSuccess({ message: 'Der Standard-Provider wurde gespeichert.' });
             } catch (error) {
@@ -146,41 +147,41 @@ export default {
         formatSchema(schema) {
             return JSON.stringify(schema || {}, null, 2);
         },
-        coveragePercent(value, total) {
-            const numericTotal = Number(total || 0);
+        rankingReasonLabel(reason) {
+            return {
+                exact_phrase: 'Exakte Wortgruppe',
+                token_match: 'Suchbegriffe erkannt',
+                shopware_match: 'Shopware-Treffer',
+                merchant_pin: 'Vom Händler angeheftet',
+                merchant_boost: 'Durch Händlerregel verstärkt',
+            }[reason] || reason;
+        },
+        queryRate(value, searches) {
+            if (!searches) return '0 %';
 
-            if (numericTotal === 0) {
-                return 0;
-            }
+            return `${Math.round((value / searches) * 100)} %`;
+        },
+        coverageRate(value, total) {
+            if (!total) return 0;
 
-            return Math.round((Number(value || 0) / numericTotal) * 100);
+            return Math.round((value / total) * 100);
         },
         async loadCoverage() {
-            if (!this.targetLanguageId) {
-                return;
-            }
+            if (!this.targetLanguageId) return;
 
             this.coverageLoading = true;
 
             try {
-                const response = await Shopware.Application.getContainer('init').httpClient.post(
-                    '/_action/contentflow/coverage',
-                    { languageId: this.targetLanguageId },
+                const response = await Shopware.Application.getContainer('init').httpClient.get(
+                    `/_action/contentflow/coverage?languageId=${encodeURIComponent(this.targetLanguageId)}`,
+                    this.apiRequestConfig(),
                 );
                 this.coverage = response.data;
             } catch (error) {
-                this.createNotificationError({
-                    message: error.response?.data?.error?.message || 'Die Content Coverage konnte nicht geladen werden.',
-                });
+                this.coverage = null;
             } finally {
                 this.coverageLoading = false;
             }
-        },
-        previewProductImage(reference) {
-            const productId = String(reference || '').replace(/^product:/, '');
-            const product = this.selectedProducts.find((item) => item.id === productId);
-
-            return product?.cover?.media?.url || null;
         },
         async createPreview() {
             this.loading = true;
@@ -194,6 +195,7 @@ export default {
                         sourceLanguage: this.sourceLanguage,
                         targetLanguage: this.targetLanguage,
                     },
+                    this.apiRequestConfig(),
                 );
                 this.preview = response.data;
                 this.createNotificationSuccess({ message: 'Die Übersetzungsvorschau ist fertig.' });
@@ -210,6 +212,7 @@ export default {
                 await Shopware.Application.getContainer('init').httpClient.post(
                     '/_action/contentflow/products/approve',
                     { languageId: this.targetLanguageId, records: this.preview.records },
+                    this.apiRequestConfig(),
                 );
                 this.createNotificationSuccess({ message: 'Die freigegebenen Übersetzungen wurden gespeichert.' });
                 this.preview = null;
@@ -227,6 +230,7 @@ export default {
                 const response = await Shopware.Application.getContainer('init').httpClient.post(
                     '/_action/contentflow/products/seo-preview',
                     { ids: this.selectedProducts.map((product) => product.id), language: this.sourceLanguage },
+                    this.apiRequestConfig(),
                 );
                 this.seoPreview = response.data;
                 this.createNotificationSuccess({ message: 'Die SEO-Vorschau ist fertig.' });
@@ -243,6 +247,7 @@ export default {
                 await Shopware.Application.getContainer('init').httpClient.post(
                     '/_action/contentflow/products/seo-approve',
                     { languageId: this.targetLanguageId, records: this.seoPreview.records },
+                    this.apiRequestConfig(),
                 );
                 this.createNotificationSuccess({ message: 'Die SEO-Daten wurden gespeichert.' });
                 this.seoPreview = null;
@@ -250,6 +255,135 @@ export default {
                 this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
             } finally {
                 this.saving = false;
+            }
+        },
+        async loadSearchAnalytics() {
+            this.searchLoading = true;
+
+            try {
+                const response = await Shopware.Application.getContainer('init').httpClient.get(
+                    '/_action/contentflow/search/analytics',
+                    this.apiRequestConfig(),
+                );
+                this.searchAnalytics = response.data;
+            } catch (error) {
+                this.searchAnalytics = null;
+            } finally {
+                this.searchLoading = false;
+            }
+        },
+        async syncSearchCatalog() {
+            this.searchSyncing = true;
+
+            try {
+                const response = await Shopware.Application.getContainer('init').httpClient.post('/_action/contentflow/search/sync', {
+                    language: this.sourceLanguageId || 'de-DE',
+                }, this.apiRequestConfig());
+                this.createNotificationSuccess({ message: `${response.data.saved || 0} Produkte wurden für die KI-Suche synchronisiert.` });
+            } catch (error) {
+                this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
+            } finally {
+                this.searchSyncing = false;
+            }
+        },
+        async testAiSearch() {
+            if (!this.searchQuery.trim()) return;
+            this.searchLoading = true;
+
+            try {
+                const response = await Shopware.Application.getContainer('init').httpClient.post('/_action/contentflow/search/test', {
+                    query: this.searchQuery,
+                    sales_channel_id: 'default',
+                    language: this.sourceLanguageId || 'de-DE',
+                    limit: 10,
+                }, this.apiRequestConfig());
+                this.searchTest = response.data;
+            } catch (error) {
+                this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
+            } finally {
+                this.searchLoading = false;
+            }
+        },
+        async saveSearchRule() {
+            try {
+                const values = this.searchRule.type === 'synonym'
+                    ? this.searchRuleSynonyms.split(',').map((value) => value.trim()).filter(Boolean)
+                    : this.selectedRuleProducts.map((product) => product.id);
+                const payload = {
+                    ...this.searchRule,
+                    product_ids: this.searchRule.type === 'synonym' ? [] : values,
+                    configuration: this.searchRule.type === 'synonym' ? { synonyms: values } : {},
+                };
+                await Shopware.Application.getContainer('init').httpClient.post(
+                    '/_action/contentflow/search/rules',
+                    payload,
+                    this.apiRequestConfig(),
+                );
+                this.createNotificationSuccess({ message: 'Die Suchregel wurde gespeichert.' });
+                this.resetSearchRule();
+                await this.loadSearchAnalytics();
+            } catch (error) {
+                this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
+            }
+        },
+        async editSearchRule(rule) {
+            const productIds = this.jsonArray(rule.product_ids);
+            const configuration = this.jsonObject(rule.configuration);
+
+            this.searchRule = {
+                id: rule.id,
+                name: rule.name,
+                type: rule.rule_type,
+                query: rule.query_pattern,
+                product_ids: productIds,
+                priority: Number(rule.priority || 100),
+                active: rule.active !== false,
+            };
+            this.searchRuleSynonyms = Array.isArray(configuration.synonyms) ? configuration.synonyms.join(', ') : '';
+            this.selectedRuleProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
+
+            if (productIds.length) {
+                const criteria = new Criteria(1, productIds.length);
+                criteria.addFilter(Criteria.equalsAny('id', productIds));
+                this.selectedRuleProducts = await this.productRepository.search(criteria, Shopware.Context.api);
+            }
+        },
+        async deleteSearchRule(rule) {
+            if (!window.confirm(`Regel „${rule.name}“ wirklich löschen?`)) return;
+
+            try {
+                await Shopware.Application.getContainer('init').httpClient.delete(
+                    `/_action/contentflow/search/rules/${encodeURIComponent(rule.id)}`,
+                    this.apiRequestConfig(),
+                );
+                this.createNotificationSuccess({ message: 'Die Suchregel wurde gelöscht.' });
+                if (this.searchRule.id === rule.id) this.resetSearchRule();
+                await this.loadSearchAnalytics();
+            } catch (error) {
+                this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
+            }
+        },
+        resetSearchRule() {
+            this.searchRule = { name: '', type: 'pin', query: '', product_ids: [], priority: 100, active: true };
+            this.searchRuleSynonyms = '';
+            this.selectedRuleProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
+        },
+        jsonArray(value) {
+            if (Array.isArray(value)) return value;
+            try {
+                const parsed = JSON.parse(value || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                return [];
+            }
+        },
+        jsonObject(value) {
+            if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+            try {
+                const parsed = JSON.parse(value || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (error) {
+                return {};
             }
         },
     },

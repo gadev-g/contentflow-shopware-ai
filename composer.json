@@ -3,7 +3,7 @@
   "description": "Review-first AI translation, SEO and media metadata for Shopware 6.",
   "type": "shopware-platform-plugin",
   "license": "proprietary",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "require": {
     "php": ">=8.2",
     "shopware/core": "^6.6 || ^6.7"

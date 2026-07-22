@@ -1,0 +1,16 @@
+.contentflow-assistant { position: fixed; right: 24px; bottom: 24px; z-index: 1050; font-family: inherit; }
+.contentflow-assistant__toggle { display: inline-flex; gap: 9px; align-items: center; justify-content: center; padding: 13px 18px; color: #fff; font-weight: 700; background: #243758; border: 0; border-radius: 999px; box-shadow: 0 14px 35px rgb(23 43 75 / 25%); }
+.contentflow-assistant__toggle-icon { width: 21px; height: 21px; flex: 0 0 21px; fill: currentcolor; }
+.contentflow-assistant__panel { position: absolute; right: 0; bottom: 58px; width: min(390px, calc(100vw - 32px)); overflow: hidden; background: #fff; border: 1px solid #dce6f2; border-radius: 16px; box-shadow: 0 24px 70px rgb(20 42 74 / 24%); }
+.contentflow-assistant__panel header { display: flex; justify-content: space-between; padding: 16px; color: #fff; background: #243758; }
+.contentflow-assistant__panel header button { color: #fff; background: none; border: 0; font-size: 22px; }
+.contentflow-assistant__messages { max-height: 380px; padding: 16px; overflow: auto; }
+.contentflow-assistant__message { padding: 10px 12px; margin-bottom: 10px; background: #f2f6fb; border-radius: 12px; }
+.contentflow-assistant__message--user { margin-left: 40px; color: #fff; background: #287cef; }
+.contentflow-assistant__product { display: flex; gap: 10px; align-items: center; justify-content: space-between; width: 100%; padding: 10px 11px; margin-top: 8px; background: #fff; border: 1px solid #bcd3ec; border-radius: 10px; box-shadow: 0 7px 18px rgb(36 55 88 / 8%); }
+.contentflow-assistant__product-link { color: #173e72; font-weight: 700; line-height: 1.35; text-decoration: none; }
+.contentflow-assistant__product-link:hover { color: #0b6bdc; text-decoration: underline; }
+.contentflow-assistant__product-select { padding: 6px 9px; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; background: #287cef; border: 0; border-radius: 7px; }
+.contentflow-assistant__panel form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e4ebf4; }
+.contentflow-assistant__panel form input { min-width: 0; padding: 10px; flex: 1; border: 1px solid #cad8e8; border-radius: 8px; }
+.contentflow-assistant__panel form button { padding: 10px 13px; color: #fff; background: #287cef; border: 0; border-radius: 8px; }
