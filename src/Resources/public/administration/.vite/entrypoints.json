@@ -1,0 +1,25 @@
+{
+  "base": "/bundles/contentflowshopwareai/administration/",
+  "entryPoints": {
+    "content-flow-shopware-ai": {
+      "css": [],
+      "dynamic": [
+        "/bundles/contentflowshopwareai/administration/assets/index-Blnyhsyt.js"
+      ],
+      "js": [
+        "/bundles/contentflowshopwareai/administration/assets/content-flow-shopware-ai-D4WHUiXD.js"
+      ],
+      "legacy": false,
+      "preload": []
+    }
+  },
+  "legacy": false,
+  "metadatas": {},
+  "version": [
+    "7.1.0",
+    7,
+    1,
+    0
+  ],
+  "viteServer": null
+}

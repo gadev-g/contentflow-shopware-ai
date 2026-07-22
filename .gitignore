@@ -1,0 +1,7 @@
+/.idea/
+/.vscode/
+/.phpunit.cache/
+/node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db

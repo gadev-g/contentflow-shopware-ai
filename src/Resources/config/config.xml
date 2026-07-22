@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+    <card>
+        <title>ContentFlow connection</title>
+        <title lang="de-DE">ContentFlow-Verbindung</title>
+        <input-field type="url">
+            <name>apiUrl</name>
+            <label>API URL</label>
+            <defaultValue>https://app.contentflow-ai.de</defaultValue>
+        </input-field>
+        <input-field type="password">
+            <name>apiKey</name>
+            <label>Project API key</label>
+            <label lang="de-DE">Projekt-API-Key</label>
+        </input-field>
+        <input-field type="text">
+            <name>provider</name>
+            <label>Default provider</label>
+            <label lang="de-DE">Standard-Provider</label>
+            <defaultValue>openai</defaultValue>
+        </input-field>
+        <input-field type="text">
+            <name>model</name>
+            <label>Model (optional)</label>
+            <label lang="de-DE">Modell (optional)</label>
+        </input-field>
+    </card>
+</config>
