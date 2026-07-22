@@ -15,5 +15,37 @@
                 <argument type="service" id="service_container"/>
             </call>
         </service>
+        <service id="ContentFlow\ShopwareAi\Service\ContentFlowSearchBuilder"
+                 decorates="Shopware\Core\Content\Product\SearchKeyword\ProductSearchBuilderInterface">
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowSearchBuilder.inner"/>
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowClient"/>
+            <argument type="service" id="logger"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\Controller\SearchStorefrontController" public="true">
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowClient"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\LineItemFactoryHandler\ProductLineItemFactory"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\Service\SearchCatalogSynchronizer">
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowClient"/>
+            <argument type="service" id="product.repository"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\Subscriber\ProductSearchIndexSubscriber">
+            <argument type="service" id="messenger.default_bus"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\Message\SearchCatalogSyncHandler">
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\SearchCatalogSynchronizer"/>
+            <tag name="messenger.message_handler"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\ScheduledTask\SearchCatalogReconcileTask">
+            <tag name="shopware.scheduled.task"/>
+        </service>
+        <service id="ContentFlow\ShopwareAi\ScheduledTask\SearchCatalogReconcileTaskHandler">
+            <argument type="service" id="scheduled_task.repository"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="ContentFlow\ShopwareAi\Service\SearchCatalogSynchronizer"/>
+            <tag name="messenger.message_handler"/>
+        </service>
     </services>
 </container>

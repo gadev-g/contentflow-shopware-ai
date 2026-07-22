@@ -14,76 +14,6 @@
                 </div>
             </section>
 
-            <sw-card class="contentflow-coverage-card" position-identifier="contentflow-coverage">
-                <template #title>
-                    <div class="contentflow-coverage-title">
-                        <div class="contentflow-product-icon contentflow-product-icon--coverage">
-                            <mt-icon name="regular-chart-bar" size="24px" />
-                        </div>
-                        <div>
-                            <span class="contentflow-product-kicker">CONTENT COVERAGE</span>
-                            <h2>Inhaltsqualität im Blick behalten</h2>
-                        </div>
-                    </div>
-                </template>
-                <template #headerRight>
-                    <sw-button size="small" :is-loading="coverageLoading" @click="loadCoverage">
-                        Aktualisieren
-                    </sw-button>
-                </template>
-
-                <p class="contentflow-coverage-description">
-                    Die Auswertung basiert direkt auf den Produkt-, Übersetzungs- und Medientabellen von Shopware.
-                </p>
-
-                <div v-if="currentCoverage" class="contentflow-coverage-metrics">
-                    <article>
-                        <span>Übersetzungen</span>
-                        <strong>{{ coveragePercent(currentCoverage.translatedProducts, currentCoverage.totalProducts) }} %</strong>
-                        <small>{{ currentCoverage.translatedProducts }} von {{ currentCoverage.totalProducts }} Produkten</small>
-                    </article>
-                    <article>
-                        <span>SEO-Daten</span>
-                        <strong>{{ coveragePercent(currentCoverage.seoProducts, currentCoverage.totalProducts) }} %</strong>
-                        <small>{{ currentCoverage.seoProducts }} von {{ currentCoverage.totalProducts }} Produkten</small>
-                    </article>
-                    <article>
-                        <span>Medien-Metadaten</span>
-                        <strong>{{ coveragePercent(currentCoverage.describedMedia, currentCoverage.totalMedia) }} %</strong>
-                        <small>{{ currentCoverage.describedMedia }} von {{ currentCoverage.totalMedia }} Medien</small>
-                    </article>
-                </div>
-
-                <div v-if="coverage?.products?.length" class="contentflow-coverage-table-wrap">
-                    <table class="contentflow-coverage-table">
-                        <thead>
-                            <tr>
-                                <th>Produkt</th>
-                                <th>Produktnummer</th>
-                                <th>Übersetzung</th>
-                                <th>SEO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="product in coverage.products" :key="product.id">
-                                <td>{{ product.name }}</td>
-                                <td>{{ product.productNumber }}</td>
-                                <td>
-                                    <span :class="['contentflow-coverage-status', { 'is-complete': Number(product.translated) === 1 }]">
-                                        {{ Number(product.translated) === 1 ? 'Vollständig' : 'Unvollständig' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span :class="['contentflow-coverage-status', { 'is-complete': Number(product.seoComplete) === 1 }]">
-                                        {{ Number(product.seoComplete) === 1 ? 'Vollständig' : 'Unvollständig' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </sw-card>
-
             <sw-card title="ContentFlow-Einstellungen" position-identifier="contentflow-settings">
                 <div class="contentflow-settings-row">
                     <mt-select
@@ -104,29 +34,13 @@
             </sw-card>
 
             <sw-card title="1. Produkte und Sprachen auswählen" position-identifier="contentflow-selection">
-                <div class="contentflow-selection-step">
-                    <sw-entity-single-select
-                        v-model:value="categoryId"
-                        entity="category"
-                        :criteria="categoryCriteria"
-                        label="Kategorie"
-                        placeholder="Zuerst eine Kategorie auswählen" />
-                </div>
-
-                <div class="contentflow-selection-step contentflow-selection-step--products">
-                    <div class="contentflow-product-selection">
-                        <sw-entity-multi-select
-                            v-model:entity-collection="selectedProducts"
-                            entity-name="product"
-                            :criteria="productCriteria"
-                            :disabled="!categoryId"
-                            label="Produkte"
-                            label-property="name"
-                            placeholder="Produkte durchsuchen und auswählen" />
-                        <p v-if="!categoryId" class="contentflow-empty-selection">Wähle zuerst eine Kategorie aus. Danach kannst du die zugehörigen Produkte durchsuchen.</p>
-                    </div>
-                </div>
-                <p class="contentflow-field-hint">Es werden Hauptprodukte der gewählten Kategorie angezeigt. Varianten werden über ihr Hauptprodukt verarbeitet.</p>
+                <sw-entity-multi-select
+                    v-model:entity-collection="selectedProducts"
+                    entity-name="product"
+                    :criteria="productCriteria"
+                    label-property="name"
+                    placeholder="Produkte auswählen" />
+                <p class="contentflow-field-hint">Es werden die vorhandenen Hauptprodukte angezeigt. Varianten werden über ihr Hauptprodukt verarbeitet.</p>
 
                 <div class="contentflow-language-grid">
                     <sw-entity-single-select
@@ -154,14 +68,7 @@
 
             <sw-card v-if="preview" title="2. Vorschau prüfen und freigeben" position-identifier="contentflow-preview">
                 <div v-for="record in preview.records" :key="record.reference" class="contentflow-preview-record">
-                    <div class="contentflow-preview-product">
-                        <img
-                            v-if="previewProductImage(record.reference)"
-                            :src="previewProductImage(record.reference)"
-                            alt=""
-                            class="contentflow-preview-product-image" />
-                        <strong>{{ record.reference }}</strong>
-                    </div>
+                    <strong>{{ record.reference }}</strong>
                     <dl>
                         <template v-for="(value, field) in record.fields" :key="field">
                             <dt>{{ field }}</dt>
@@ -177,6 +84,50 @@
                     @click="approve">
                     Freigeben und speichern
                 </sw-button-process>
+            </sw-card>
+
+            <sw-card class="contentflow-coverage-card" position-identifier="contentflow-coverage">
+                <template #title>
+                    <div class="contentflow-product-header">
+                        <div class="contentflow-product-icon contentflow-product-icon--coverage">
+                            <mt-icon name="regular-chart-bar" size="24px" />
+                        </div>
+                        <div class="contentflow-product-copy">
+                            <div class="contentflow-product-kicker"><span>CONTENT COVERAGE</span></div>
+                            <h2>Pflegestatus deines Produktkatalogs</h2>
+                        </div>
+                    </div>
+                </template>
+
+                <p class="contentflow-product-description">Erkenne für die gewählte Zielsprache sofort, welche Produkte übersetzt und SEO-fertig sind und welchen Bildern noch Alt-Texte fehlen.</p>
+
+                <div v-if="coverage" class="contentflow-coverage-grid">
+                    <article>
+                        <div><span>Übersetzte Produkte</span><strong>{{ coverage.products.translated }} / {{ coverage.products.total }}</strong></div>
+                        <div class="contentflow-coverage-progress"><span :style="{ width: coverageRate(coverage.products.translated, coverage.products.total) + '%' }"></span></div>
+                        <small>{{ coverageRate(coverage.products.translated, coverage.products.total) }} % vollständig</small>
+                    </article>
+                    <article>
+                        <div><span>SEO vollständig</span><strong>{{ coverage.products.seo_complete }} / {{ coverage.products.total }}</strong></div>
+                        <div class="contentflow-coverage-progress"><span :style="{ width: coverageRate(coverage.products.seo_complete, coverage.products.total) + '%' }"></span></div>
+                        <small>{{ coverageRate(coverage.products.seo_complete, coverage.products.total) }} % vollständig</small>
+                    </article>
+                    <article>
+                        <div><span>Bilder mit Alt-Text</span><strong>{{ coverage.media.with_alt }} / {{ coverage.media.total }}</strong></div>
+                        <div class="contentflow-coverage-progress"><span :style="{ width: coverageRate(coverage.media.with_alt, coverage.media.total) + '%' }"></span></div>
+                        <small>{{ coverageRate(coverage.media.with_alt, coverage.media.total) }} % barriereärmer</small>
+                    </article>
+                </div>
+
+                <div v-if="coverage && coverage.missing.length" class="contentflow-coverage-missing">
+                    <h3>Als Nächstes bearbeiten</h3>
+                    <div v-for="product in coverage.missing" :key="product.id">
+                        <div><strong>{{ product.name || product.product_number }}</strong><span>{{ product.product_number }}</span></div>
+                        <span v-if="!Number(product.translated)" class="is-warning">Übersetzung fehlt</span>
+                        <span v-if="!Number(product.seo_complete)" class="is-info">SEO unvollständig</span>
+                    </div>
+                </div>
+                <div v-else-if="coverageLoading" class="contentflow-coverage-loading">Abdeckung wird berechnet …</div>
             </sw-card>
 
             <sw-card class="contentflow-seo-card" position-identifier="contentflow-seo">
@@ -249,6 +200,137 @@
                         @click="approveSeo">
                         SEO-Daten freigeben und speichern
                     </sw-button-process>
+                </div>
+            </sw-card>
+
+            <sw-card class="contentflow-search-card" position-identifier="contentflow-search">
+                <template #title>
+                    <div class="contentflow-product-header">
+                        <div class="contentflow-product-icon contentflow-product-icon--search">
+                            <mt-icon name="regular-search" size="24px" />
+                        </div>
+                        <div class="contentflow-product-copy">
+                            <div class="contentflow-product-kicker"><span>CONTENTFLOW AI SEARCH</span></div>
+                            <h2>Suche verstehen, steuern und verkaufen</h2>
+                        </div>
+                    </div>
+                </template>
+                <template #headerRight><span class="contentflow-product-badge">PRO PRODUCT</span></template>
+
+                <p class="contentflow-product-description">Semantische Produktsuche mit verbindlichen Händlerregeln, Nulltrefferanalyse und sicherem Shopware-Fallback.</p>
+
+                <div v-if="searchAnalytics" class="contentflow-search-stats">
+                    <div><strong>{{ searchAnalytics.totals.searches || 0 }}</strong><span>Suchanfragen</span></div>
+                    <div><strong>{{ searchAnalytics.totals.zero_results || 0 }}</strong><span>Nulltreffer</span></div>
+                    <div><strong>{{ searchAnalytics.totals.clicks || 0 }}</strong><span>Klicks</span></div>
+                    <div><strong>{{ searchAnalytics.totals.carts || 0 }}</strong><span>Warenkörbe</span></div>
+                    <div><strong>{{ searchAnalytics.totals.purchases || 0 }}</strong><span>Käufe</span></div>
+                </div>
+
+                <div class="contentflow-search-actions">
+                    <sw-button-process variant="primary" :is-loading="searchSyncing" @click="syncSearchCatalog">Produktindex synchronisieren</sw-button-process>
+                    <span v-if="searchAnalytics && !searchAnalytics.active" class="contentflow-search-upgrade">Die aktive KI-Suche benötigt den Professional-Tarif.</span>
+                </div>
+
+                <section class="contentflow-ranking-section">
+                    <div class="contentflow-ranking-heading">
+                        <h3>Ranking testen</h3>
+                        <p>Prüfe, welche Produkte ContentFlow für eine konkrete Kundenanfrage priorisiert und warum.</p>
+                    </div>
+                    <div class="contentflow-search-test">
+                        <sw-text-field v-model:value="searchQuery" placeholder="z. B. leichte Jacke für Regen" />
+                        <sw-button-process variant="primary" :is-loading="searchLoading" :disabled="!searchQuery || searchLoading" @click="testAiSearch">Suche testen</sw-button-process>
+                    </div>
+                <div v-if="searchTest" class="contentflow-ranking-summary">
+                    <strong>{{ searchTest.candidates.length }} passende Produkte</strong>
+                    <span>Die Reihenfolge kombiniert Texttreffer, Shopware-Relevanz, Händlerregeln und bisherige Nutzersignale.</span>
+                </div>
+                <ol v-if="searchTest && searchTest.candidates.length" class="contentflow-ranking-list">
+                    <li v-for="candidate in searchTest.candidates" :key="candidate.id">
+                        <span class="contentflow-ranking-position">{{ searchTest.candidates.indexOf(candidate) + 1 }}</span>
+                        <div class="contentflow-ranking-product">
+                            <strong>{{ candidate.title || candidate.id }}</strong>
+                            <span v-if="candidate.manufacturer || candidate.product_number">{{ candidate.manufacturer }}<template v-if="candidate.manufacturer && candidate.product_number"> · </template>{{ candidate.product_number }}</span>
+                        </div>
+                        <div class="contentflow-ranking-score"><strong>{{ candidate.score }}</strong><span>Ranking-Punkte</span></div>
+                        <div class="contentflow-ranking-reasons">
+                            <span v-for="reason in candidate.reasons" :key="reason">{{ rankingReasonLabel(reason) }}</span>
+                            <small>{{ candidate.matched_tokens || 0 }} von {{ candidate.total_tokens || 0 }} Suchbegriffen erkannt</small>
+                        </div>
+                    </li>
+                </ol>
+                <div v-else-if="searchTest" class="contentflow-ranking-empty">Keine passenden Produkte gefunden. Synchronisiere den Produktindex oder ergänze Synonyme für diese Suchanfrage.</div>
+                </section>
+
+                <div class="contentflow-rule-editor">
+                    <div v-if="searchAnalytics && searchAnalytics.rules.length" class="contentflow-rule-list">
+                        <div class="contentflow-rule-list-heading">
+                            <div><h3>Bestehende Händlerregeln</h3><p>Bearbeite Priorisierungen, Ausschlüsse und Synonyme für deine Suche.</p></div>
+                            <span>{{ searchAnalytics.rules.length }} Regeln</span>
+                        </div>
+                        <article v-for="rule in searchAnalytics.rules" :key="rule.id" class="contentflow-rule-item">
+                            <div>
+                                <strong>{{ rule.name }}</strong>
+                                <span>{{ rule.query_pattern }}</span>
+                            </div>
+                            <span class="contentflow-rule-type">{{ rule.rule_type }}</span>
+                            <div class="contentflow-rule-actions">
+                                <sw-button size="small" @click="editSearchRule(rule)">Bearbeiten</sw-button>
+                                <sw-button size="small" variant="danger" @click="deleteSearchRule(rule)">Löschen</sw-button>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div class="contentflow-rule-form-heading">
+                        <h3>{{ searchRule.id ? 'Händlerregel bearbeiten' : 'Neue Händlerregel' }}</h3>
+                        <sw-button v-if="searchRule.id" size="small" @click="resetSearchRule">Abbrechen</sw-button>
+                    </div>
+                    <div class="contentflow-rule-grid">
+                        <sw-text-field v-model:value="searchRule.name" label="Name" />
+                        <mt-select v-model="searchRule.type" label="Regeltyp" :options="[
+                            { value: 'pin', label: 'Produkte anheften' },
+                            { value: 'boost', label: 'Produkte boosten' },
+                            { value: 'exclude', label: 'Produkte ausschließen' },
+                            { value: 'synonym', label: 'Synonyme' }
+                        ]" />
+                        <sw-text-field v-model:value="searchRule.query" label="Suchbegriff" />
+                        <sw-text-field
+                            v-if="searchRule.type === 'synonym'"
+                            v-model:value="searchRuleSynonyms"
+                            label="Synonyme"
+                            help-text="Mehrere Begriffe mit Komma trennen"
+                        />
+                        <sw-entity-multi-select
+                            v-else
+                            v-model:entity-collection="selectedRuleProducts"
+                            entity-name="product"
+                            label="Produkte"
+                            label-property="name"
+                            :criteria="productCriteria"
+                            placeholder="Produkte auswählen"
+                        />
+                    </div>
+                    <sw-button variant="primary" :disabled="!searchRule.name || !searchRule.query" @click="saveSearchRule">{{ searchRule.id ? 'Änderungen speichern' : 'Regel speichern' }}</sw-button>
+                </div>
+
+                <div v-if="searchAnalytics && searchAnalytics.queries.length" class="contentflow-query-table">
+                    <div class="contentflow-query-heading"><div><h3>Suchanfragen der letzten 30 Tage</h3><p>Erkenne Nulltreffer und Begriffe mit ungenutztem Verkaufspotenzial.</p></div></div>
+                    <div class="contentflow-query-header" aria-hidden="true">
+                        <span>Suchanfrage</span>
+                        <span>Status</span>
+                        <span>Suchen</span>
+                        <span>Treffer</span>
+                        <span>Klicks</span>
+                        <span>Warenkörbe</span>
+                    </div>
+                    <div v-for="row in searchAnalytics.queries" :key="row.query" class="contentflow-query-row">
+                        <div class="contentflow-query-name"><strong>{{ row.query }}</strong></div>
+                        <div class="contentflow-query-status-column"><span :class="['contentflow-query-status', { 'is-warning': !row.result_count }]">{{ row.result_count ? 'Treffer vorhanden' : 'Nulltreffer' }}</span></div>
+                        <div class="contentflow-query-metric"><strong>{{ row.searches }}</strong></div>
+                        <div class="contentflow-query-metric"><strong>{{ row.result_count }}</strong></div>
+                        <div class="contentflow-query-metric"><strong>{{ row.clicks }} <small>{{ queryRate(row.clicks, row.searches) }}</small></strong></div>
+                        <div class="contentflow-query-metric"><strong>{{ row.carts }} <small>{{ queryRate(row.carts, row.searches) }}</small></strong></div>
+                    </div>
                 </div>
             </sw-card>
         </div>

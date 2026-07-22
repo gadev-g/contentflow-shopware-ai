@@ -20,7 +20,7 @@ final readonly class ContentFlowClient
     /** @param array<string, mixed> $payload
      *  @return array<string, mixed>
      */
-    public function post(string $path, array $payload): array
+    public function post(string $path, array $payload, float $timeout = 30.0): array
     {
         $apiUrl = rtrim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiUrl'), '/');
         $apiKey = trim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiKey'));
@@ -35,13 +35,14 @@ final readonly class ContentFlowClient
                 'X-API-Key' => $apiKey,
             ],
             'json' => $payload,
+            'timeout' => $timeout,
         ]);
 
         /** @var array<string, mixed> $result */
         $result = $response->toArray(false);
 
         if ($response->getStatusCode() >= 400) {
-            $message = $result['error']['message'] ?? 'ContentFlow request failed.';
+            $message = $result['error']['message'] ?? $result['errors'][0]['detail'] ?? 'ContentFlow request failed.';
             throw new \RuntimeException(\is_string($message) ? $message : 'ContentFlow request failed.');
         }
 
@@ -69,7 +70,35 @@ final readonly class ContentFlowClient
         $result = $response->toArray(false);
 
         if ($response->getStatusCode() >= 400) {
-            $message = $result['error']['message'] ?? 'ContentFlow request failed.';
+            $message = $result['error']['message'] ?? $result['errors'][0]['detail'] ?? 'ContentFlow request failed.';
+            throw new \RuntimeException(\is_string($message) ? $message : 'ContentFlow request failed.');
+        }
+
+        return $result;
+    }
+
+    /** @return array<string, mixed> */
+    public function delete(string $path): array
+    {
+        $apiUrl = rtrim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiUrl'), '/');
+        $apiKey = trim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiKey'));
+
+        if ('' === $apiUrl || '' === $apiKey) {
+            throw new \RuntimeException('Configure the ContentFlow API URL and project API key first.');
+        }
+
+        $response = $this->httpClient->request('DELETE', $apiUrl . $path, [
+            'headers' => [
+                'Accept' => 'application/json',
+                'X-API-Key' => $apiKey,
+            ],
+        ]);
+
+        /** @var array<string, mixed> $result */
+        $result = $response->toArray(false);
+
+        if ($response->getStatusCode() >= 400) {
+            $message = $result['error']['message'] ?? $result['errors'][0]['detail'] ?? 'ContentFlow request failed.';
             throw new \RuntimeException(\is_string($message) ? $message : 'ContentFlow request failed.');
         }
 
@@ -91,5 +120,15 @@ final readonly class ContentFlowClient
         $model = trim((string) $this->configuration->get(self::CONFIG_PREFIX . 'model'));
 
         return '' === $model ? null : $model;
+    }
+
+    public function searchEnabled(): bool
+    {
+        return true === $this->configuration->get(self::CONFIG_PREFIX . 'searchEnabled');
+    }
+
+    public function assistantEnabled(): bool
+    {
+        return true === $this->configuration->get(self::CONFIG_PREFIX . 'assistantEnabled');
     }
 }
