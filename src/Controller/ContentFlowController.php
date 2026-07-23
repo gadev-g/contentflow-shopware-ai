@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ContentFlow\ShopwareAi\Controller;
 
 use ContentFlow\ShopwareAi\Service\ContentFlowClient;
+use ContentFlow\ShopwareAi\Service\SearchCatalogSynchronizer;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -22,6 +23,7 @@ final class ContentFlowController extends AbstractController
         private readonly ContentFlowClient $client,
         private readonly EntityRepository $productRepository,
         private readonly Connection $connection,
+        private readonly SearchCatalogSynchronizer $catalogSynchronizer,
     ) {
     }
 
@@ -286,46 +288,12 @@ final class ContentFlowController extends AbstractController
     public function syncSearchCatalog(Request $request, Context $context): JsonResponse
     {
         $data = $request->toArray();
-        $criteria = (new Criteria())
-            ->addAssociation('manufacturer')
-            ->addAssociation('categories')
-            ->addAssociation('properties.group');
-        $products = $this->productRepository->search($criteria, $context);
-        $documents = [];
-
-        foreach ($products as $product) {
-            if (null !== $product->getParentId()) {
-                continue;
-            }
-
-            $categories = [];
-            foreach ($product->getCategories() ?? [] as $category) {
-                $categories[] = (string) $category->getTranslation('name');
-            }
-            $attributes = [];
-            foreach ($product->getProperties() ?? [] as $property) {
-                $group = $property->getGroup();
-                $attributes[(string) ($group?->getTranslation('name') ?? 'Property')][] = (string) $property->getTranslation('name');
-            }
-
-            $documents[] = [
-                'id' => $product->getId(),
-                'title' => (string) $product->getTranslation('name'),
-                'description' => strip_tags((string) $product->getTranslation('description')),
-                'category' => implode(' ', array_filter($categories)),
-                'manufacturer' => (string) ($product->getManufacturer()?->getTranslation('name') ?? ''),
-                'product_number' => $product->getProductNumber(),
-                'keywords' => array_values(array_filter(array_map('trim', explode(',', (string) $product->getTranslation('keywords'))))),
-                'attributes' => $attributes,
-                'active' => $product->getActive(),
-            ];
-        }
-
-        $result = $this->client->post('/api/v1/integrations/shopware/search/catalog', [
-            'sales_channel_id' => \is_string($data['salesChannelId'] ?? null) ? $data['salesChannelId'] : 'default',
-            'language' => \is_string($data['language'] ?? null) ? $data['language'] : $context->getLanguageId(),
-            'documents' => $documents,
-        ]);
+        $result = $this->catalogSynchronizer->sync(
+            $context,
+            [],
+            \is_string($data['salesChannelId'] ?? null) ? $data['salesChannelId'] : 'default',
+            \is_string($data['language'] ?? null) ? $data['language'] : null,
+        );
 
         return new JsonResponse($result, 202);
     }
