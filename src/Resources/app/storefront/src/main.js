@@ -35,6 +35,8 @@ class ContentFlowAssistant {
         this.history.push({ role: 'user', content: message });
         this.persistHistory();
         input.value = '';
+        const thinkingMessage = this.addThinkingMessage();
+        this.setBusy(true);
 
         try {
             const response = await fetch('/contentflow/assistant', {
@@ -63,7 +65,37 @@ class ContentFlowAssistant {
             this.persistHistory();
         } catch (error) {
             this.addMessage(error.message, 'assistant');
+        } finally {
+            thinkingMessage.remove();
+            this.setBusy(false);
         }
+    }
+
+    addThinkingMessage() {
+        const item = document.createElement('article');
+        item.className = 'contentflow-assistant__message contentflow-assistant__message--assistant contentflow-assistant__message--thinking';
+        item.setAttribute('role', 'status');
+        item.setAttribute('aria-label', 'Der KI-Berater denkt nach');
+
+        const spinner = document.createElement('span');
+        spinner.className = 'contentflow-assistant__spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+
+        const text = document.createElement('span');
+        text.textContent = 'Ich denke nach …';
+
+        item.appendChild(spinner);
+        item.appendChild(text);
+        this.messages.appendChild(item);
+        this.messages.scrollTop = this.messages.scrollHeight;
+
+        return item;
+    }
+
+    setBusy(busy) {
+        this.form.setAttribute('aria-busy', String(busy));
+        this.form.elements.message.disabled = busy;
+        this.form.querySelector('button[type="submit"]').disabled = busy;
     }
 
     addMessage(text, role, products = [], suggestions = []) {
