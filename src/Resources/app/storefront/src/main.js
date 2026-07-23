@@ -130,9 +130,7 @@ class ContentFlowAssistant {
             content.appendChild(this.createAssistantIcon());
         }
 
-        const paragraph = document.createElement('p');
-        paragraph.textContent = text;
-        content.appendChild(paragraph);
+        content.appendChild(this.createReply(text, products));
         item.appendChild(content);
 
         if (products.length) {
@@ -222,6 +220,71 @@ class ContentFlowAssistant {
 
         this.messages.appendChild(item);
         this.messages.scrollTop = this.messages.scrollHeight;
+    }
+
+    createReply(text, products = []) {
+        const reply = document.createElement('div');
+        reply.className = 'contentflow-assistant__reply';
+        let list = null;
+
+        String(text).split(/\r?\n/).forEach((line) => {
+            const listItem = line.match(/^\s*[-•]\s+(.+)$/u);
+
+            if (listItem) {
+                if (!list) {
+                    list = document.createElement('ul');
+                    reply.appendChild(list);
+                }
+                const item = document.createElement('li');
+                this.appendReplyText(item, listItem[1], products);
+                list.appendChild(item);
+                return;
+            }
+
+            list = null;
+            if (!line.trim()) {
+                return;
+            }
+            const paragraph = document.createElement('p');
+            this.appendReplyText(paragraph, line, products);
+            reply.appendChild(paragraph);
+        });
+
+        return reply;
+    }
+
+    appendReplyText(element, text, products) {
+        const titles = products
+            .map((product) => String(product.title || '').trim())
+            .filter(Boolean)
+            .sort((left, right) => right.length - left.length);
+        let remainder = String(text);
+
+        while (remainder) {
+            let matchIndex = -1;
+            let matchTitle = '';
+
+            titles.forEach((title) => {
+                const index = remainder.indexOf(title);
+                if (index >= 0 && (matchIndex < 0 || index < matchIndex)) {
+                    matchIndex = index;
+                    matchTitle = title;
+                }
+            });
+
+            if (matchIndex < 0) {
+                element.appendChild(document.createTextNode(remainder));
+                break;
+            }
+            if (matchIndex > 0) {
+                element.appendChild(document.createTextNode(remainder.slice(0, matchIndex)));
+            }
+
+            const strong = document.createElement('strong');
+            strong.textContent = matchTitle;
+            element.appendChild(strong);
+            remainder = remainder.slice(matchIndex + matchTitle.length);
+        }
     }
 
     createAssistantIcon(className = 'contentflow-assistant__answer-icon') {
