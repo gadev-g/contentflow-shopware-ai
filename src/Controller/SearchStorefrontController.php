@@ -94,16 +94,34 @@ final readonly class SearchStorefrontController
             return [];
         }
 
-        $availableIds = $this->productRepository
-            ->search(new Criteria($ids), $context)
-            ->getIds();
+        $criteria = new Criteria($ids);
+        $criteria->addAssociations(['cover.media', 'categories', 'manufacturer']);
+        $availableProducts = $this->productRepository->search($criteria, $context)->getEntities();
+        $currency = $context->getCurrency()->getIsoCode();
+        $result = [];
 
-        return array_values(array_filter(
-            $products,
-            static fn (mixed $product): bool => \is_array($product)
-                && \is_string($product['id'] ?? null)
-                && \in_array($product['id'], $availableIds, true),
-        ));
+        foreach ($products as $product) {
+            if (!\is_array($product) || !\is_string($product['id'] ?? null)) {
+                continue;
+            }
+
+            $availableProduct = $availableProducts->get($product['id']);
+            if (null === $availableProduct) {
+                continue;
+            }
+
+            $category = $availableProduct->getCategories()?->first();
+            $product['title'] = $availableProduct->getTranslation('name') ?: ($product['title'] ?? '');
+            $product['category'] = $category?->getTranslation('name') ?: ($product['category'] ?? '');
+            $product['manufacturer'] = $availableProduct->getManufacturer()?->getTranslation('name')
+                ?: ($product['manufacturer'] ?? '');
+            $product['image_url'] = $availableProduct->getCover()?->getMedia()?->getUrl();
+            $product['price'] = $availableProduct->getCalculatedPrice()->getUnitPrice();
+            $product['currency'] = $currency;
+            $result[] = $product;
+        }
+
+        return $result;
     }
 
     #[Route('/contentflow/search/event', name: 'frontend.contentflow.search.event', methods: ['POST'], defaults: ['XmlHttpRequest' => true])]
