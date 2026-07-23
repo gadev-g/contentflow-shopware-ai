@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace ContentFlow\ShopwareAi\Controller;
 
 use ContentFlow\ShopwareAi\Service\ContentFlowClient;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\LineItemFactoryHandler\LineItemFactoryInterface;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
+use Shopware\Core\System\SalesChannel\Entity\SalesChannelRepository;
 use Shopware\Storefront\Framework\Routing\StorefrontRouteScope;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,6 +23,7 @@ final readonly class SearchStorefrontController
         private ContentFlowClient $client,
         private CartService $cartService,
         private LineItemFactoryInterface $productLineItemFactory,
+        private SalesChannelRepository $productRepository,
     ) {
     }
 
@@ -38,10 +41,18 @@ final readonly class SearchStorefrontController
                 'session_id' => $request->getSession()->getId(),
                 'sales_channel_id' => $context->getSalesChannelId(),
                 'language' => $context->getLanguageId(),
+                'provider' => $this->client->provider(),
+                'model' => $this->client->model(),
             ]);
+            $response['products'] = $this->availableProducts($response['products'] ?? [], $context);
             $action = $response['cart_action'] ?? null;
 
-            if (\is_array($action) && 'add_product' === ($action['type'] ?? null) && \is_string($action['product_id'] ?? null)) {
+            if (
+                \is_array($action)
+                && 'add_product' === ($action['type'] ?? null)
+                && \is_string($action['product_id'] ?? null)
+                && \in_array($action['product_id'], array_column($response['products'], 'id'), true)
+            ) {
                 $lineItem = $this->productLineItemFactory->create([
                     'id' => $action['product_id'],
                     'referencedId' => $action['product_id'],
@@ -55,6 +66,39 @@ final readonly class SearchStorefrontController
         } catch (\Throwable $exception) {
             return new JsonResponse(['error' => ['message' => $exception->getMessage()]], 502);
         }
+    }
+
+    /**
+     * @param mixed $products
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function availableProducts(mixed $products, SalesChannelContext $context): array
+    {
+        if (!\is_array($products)) {
+            return [];
+        }
+
+        $ids = array_values(array_filter(array_map(
+            static fn (mixed $product): string => \is_array($product) && \is_string($product['id'] ?? null)
+                ? $product['id']
+                : '',
+            $products,
+        )));
+        if ([] === $ids) {
+            return [];
+        }
+
+        $availableIds = $this->productRepository
+            ->search(new Criteria($ids), $context)
+            ->getIds();
+
+        return array_values(array_filter(
+            $products,
+            static fn (mixed $product): bool => \is_array($product)
+                && \is_string($product['id'] ?? null)
+                && \in_array($product['id'], $availableIds, true),
+        ));
     }
 
     #[Route('/contentflow/search/event', name: 'frontend.contentflow.search.event', methods: ['POST'], defaults: ['XmlHttpRequest' => true])]

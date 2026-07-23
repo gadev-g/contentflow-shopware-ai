@@ -4,22 +4,36 @@ class ContentFlowAssistant {
         this.panel = element.querySelector('.contentflow-assistant__panel');
         this.messages = element.querySelector('.contentflow-assistant__messages');
         this.form = element.querySelector('form');
-        this.history = [];
+        this.history = this.restoreHistory();
+
         element.querySelector('.contentflow-assistant__toggle').addEventListener('click', () => this.open());
         element.querySelector('[data-contentflow-close]').addEventListener('click', () => this.close());
         this.form.addEventListener('submit', (event) => this.submit(event));
+        this.history.forEach((entry) => {
+            this.addMessage(entry.content, entry.role, entry.products || [], entry.suggestions || []);
+        });
     }
 
-    open() { this.panel.hidden = false; }
-    close() { this.panel.hidden = true; }
+    open() {
+        this.panel.hidden = false;
+    }
+
+    close() {
+        this.panel.hidden = true;
+    }
 
     async submit(event) {
         event.preventDefault();
         const input = this.form.elements.message;
         const message = input.value.trim();
-        if (!message) return;
+
+        if (!message) {
+            return;
+        }
+
         this.addMessage(message, 'user');
         this.history.push({ role: 'user', content: message });
+        this.persistHistory();
         input.value = '';
 
         try {
@@ -29,20 +43,32 @@ class ContentFlowAssistant {
                 body: JSON.stringify({ message, history: this.history.slice(-10) }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error?.message || 'Der Berater ist gerade nicht erreichbar.');
-            this.addMessage(data.reply, 'assistant', data.products || []);
-            this.history.push({ role: 'assistant', content: data.reply });
+
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Der Berater ist gerade nicht erreichbar.');
+            }
+
+            this.addMessage(data.reply, 'assistant', data.products || [], data.suggestions || []);
+            this.history.push({
+                role: 'assistant',
+                content: data.reply,
+                products: data.products || [],
+                suggestions: data.suggestions || [],
+            });
+            this.history = this.history.slice(-10);
+            this.persistHistory();
         } catch (error) {
             this.addMessage(error.message, 'assistant');
         }
     }
 
-    addMessage(text, role, products = []) {
+    addMessage(text, role, products = [], suggestions = []) {
         const item = document.createElement('article');
         item.className = `contentflow-assistant__message contentflow-assistant__message--${role}`;
         const paragraph = document.createElement('p');
         paragraph.textContent = text;
         item.appendChild(paragraph);
+
         products.forEach((product) => {
             const card = document.createElement('div');
             card.className = 'contentflow-assistant__product';
@@ -50,6 +76,14 @@ class ContentFlowAssistant {
             link.className = 'contentflow-assistant__product-link';
             link.href = `/detail/${encodeURIComponent(product.id)}`;
             link.textContent = product.title;
+
+            if (product.reason) {
+                const reason = document.createElement('small');
+                reason.className = 'contentflow-assistant__product-reason';
+                reason.textContent = product.reason;
+                link.appendChild(reason);
+            }
+
             const select = document.createElement('button');
             select.type = 'button';
             select.className = 'contentflow-assistant__product-select';
@@ -59,19 +93,65 @@ class ContentFlowAssistant {
             card.appendChild(select);
             item.appendChild(card);
         });
+
+        if (suggestions.length) {
+            const chips = document.createElement('div');
+            chips.className = 'contentflow-assistant__suggestions';
+
+            suggestions.forEach((suggestion) => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.textContent = suggestion;
+                chip.addEventListener('click', () => {
+                    this.form.elements.message.value = suggestion;
+                    this.form.requestSubmit();
+                });
+                chips.appendChild(chip);
+            });
+            item.appendChild(chips);
+        }
+
         this.messages.appendChild(item);
         this.messages.scrollTop = this.messages.scrollHeight;
     }
 
     async confirmProduct(productId, title) {
-        if (!window.confirm(`${title} in den Warenkorb legen?`)) return;
+        if (!window.confirm(`${title} in den Warenkorb legen?`)) {
+            return;
+        }
+
         const response = await fetch('/contentflow/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: JSON.stringify({ message: title, product_id: productId, confirmed: true, quantity: 1 }),
+            body: JSON.stringify({
+                message: `Ja, ${title} in den Warenkorb legen`,
+                history: this.history.slice(-10),
+                product_id: productId,
+                confirmed: true,
+                quantity: 1,
+            }),
         });
         const data = await response.json();
-        this.addMessage(data.cart_updated ? 'Das Produkt wurde in den Warenkorb gelegt.' : (data.error?.message || 'Das Produkt konnte nicht hinzugefügt werden.'), 'assistant');
+        this.addMessage(
+            data.cart_updated
+                ? 'Das Produkt wurde in den Warenkorb gelegt.'
+                : (data.error?.message || 'Das Produkt konnte nicht hinzugefügt werden.'),
+            'assistant',
+        );
+    }
+
+    restoreHistory() {
+        try {
+            const history = JSON.parse(sessionStorage.getItem('contentflowAssistantHistory') || '[]');
+
+            return Array.isArray(history) ? history.slice(-10) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    persistHistory() {
+        sessionStorage.setItem('contentflowAssistantHistory', JSON.stringify(this.history.slice(-10)));
     }
 }
 
@@ -81,7 +161,13 @@ const search = new URLSearchParams(window.location.search).get('search');
 const trackSearchEvent = (type, query, productId = null, resultCount = 0) => fetch('/contentflow/search/event', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    body: JSON.stringify({ type, event_key: crypto.randomUUID(), query, product_id: productId, result_count: resultCount }),
+    body: JSON.stringify({
+        type,
+        event_key: crypto.randomUUID(),
+        query,
+        product_id: productId,
+        result_count: resultCount,
+    }),
     keepalive: true,
 });
 
@@ -92,13 +178,26 @@ if (search && document.body.classList.contains('is-act-search')) {
 
     document.querySelectorAll('.product-box').forEach((box) => {
         let information = {};
-        try { information = JSON.parse(box.dataset.productInformation || '{}'); } catch (error) { information = {}; }
-        box.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => trackSearchEvent('click', search, information.id)));
-        box.querySelectorAll('form').forEach((form) => form.addEventListener('submit', () => {
-            trackSearchEvent('cart', search, information.id);
-            const products = JSON.parse(sessionStorage.getItem('contentflowSearchCart') || '[]');
-            sessionStorage.setItem('contentflowSearchCart', JSON.stringify([...new Set([...products, information.id])].filter(Boolean)));
-        }));
+
+        try {
+            information = JSON.parse(box.dataset.productInformation || '{}');
+        } catch (error) {
+            information = {};
+        }
+
+        box.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => trackSearchEvent('click', search, information.id));
+        });
+        box.querySelectorAll('form').forEach((form) => {
+            form.addEventListener('submit', () => {
+                trackSearchEvent('cart', search, information.id);
+                const products = JSON.parse(sessionStorage.getItem('contentflowSearchCart') || '[]');
+                sessionStorage.setItem(
+                    'contentflowSearchCart',
+                    JSON.stringify([...new Set([...products, information.id])].filter(Boolean)),
+                );
+            });
+        });
     });
 }
 

@@ -9,8 +9,11 @@
 .contentflow-assistant__message--user { margin-left: 40px; color: #fff; background: #287cef; }
 .contentflow-assistant__product { display: flex; gap: 10px; align-items: center; justify-content: space-between; width: 100%; padding: 10px 11px; margin-top: 8px; background: #fff; border: 1px solid #bcd3ec; border-radius: 10px; box-shadow: 0 7px 18px rgb(36 55 88 / 8%); }
 .contentflow-assistant__product-link { color: #173e72; font-weight: 700; line-height: 1.35; text-decoration: none; }
+.contentflow-assistant__product-reason { display: block; margin-top: 3px; color: #61748e; font-size: 11px; font-weight: 500; }
 .contentflow-assistant__product-link:hover { color: #0b6bdc; text-decoration: underline; }
 .contentflow-assistant__product-select { padding: 6px 9px; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; background: #287cef; border: 0; border-radius: 7px; }
+.contentflow-assistant__suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.contentflow-assistant__suggestions button { padding: 6px 9px; color: #173e72; font-size: 11px; font-weight: 700; background: #fff; border: 1px solid #bcd3ec; border-radius: 999px; }
 .contentflow-assistant__panel form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e4ebf4; }
 .contentflow-assistant__panel form input { min-width: 0; padding: 10px; flex: 1; border: 1px solid #cad8e8; border-radius: 8px; }
 .contentflow-assistant__panel form button { padding: 10px 13px; color: #fff; background: #287cef; border: 0; border-radius: 8px; }

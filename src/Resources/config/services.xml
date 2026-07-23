@@ -26,6 +26,7 @@
             <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowClient"/>
             <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
             <argument type="service" id="Shopware\Core\Checkout\Cart\LineItemFactoryHandler\ProductLineItemFactory"/>
+            <argument type="service" id="sales_channel.product.repository"/>
         </service>
         <service id="ContentFlow\ShopwareAi\Service\SearchCatalogSynchronizer">
             <argument type="service" id="ContentFlow\ShopwareAi\Service\ContentFlowClient"/>

@@ -15,6 +15,24 @@ Copy this directory to `custom/plugins/ContentFlowShopwareAi`, then run:
 ```bash
 bin/console plugin:refresh
 bin/console plugin:install --activate ContentFlowShopwareAi
+bin/console assets:install
+bin/console theme:compile
+bin/console cache:clear
+bin/build-administration.sh
+```
+
+## Update an existing installation
+
+After replacing the plugin files, rebuild routes, Administration assets and
+Storefront assets together. Skipping one of these steps can leave Shopware with
+an old HTTP method cache or a Storefront theme that does not contain the
+shopping assistant.
+
+```bash
+bin/console plugin:refresh
+bin/console plugin:update ContentFlowShopwareAi
+bin/console assets:install
+bin/console theme:compile
 bin/console cache:clear
 bin/build-administration.sh
 ```
