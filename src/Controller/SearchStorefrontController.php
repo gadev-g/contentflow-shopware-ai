@@ -115,7 +115,12 @@ final readonly class SearchStorefrontController
             $product['category'] = $category?->getTranslation('name') ?: ($product['category'] ?? '');
             $product['manufacturer'] = $availableProduct->getManufacturer()?->getTranslation('name')
                 ?: ($product['manufacturer'] ?? '');
-            $product['image_url'] = $availableProduct->getCover()?->getMedia()?->getUrl();
+            $localImageUrl = $availableProduct->getCover()?->getMedia()?->getUrl();
+            $syncedImageUrl = \is_array($product['attributes'] ?? null)
+                && \is_string($product['attributes']['_contentflow_image_url'] ?? null)
+                    ? $product['attributes']['_contentflow_image_url']
+                    : null;
+            $product['image_url'] = $localImageUrl ?: $syncedImageUrl;
             $product['price'] = $availableProduct->getCalculatedPrice()->getUnitPrice();
             $product['currency'] = $currency;
             $result[] = $product;
