@@ -4,10 +4,12 @@ class ContentFlowAssistant {
         this.panel = element.querySelector('.contentflow-assistant__panel');
         this.messages = element.querySelector('.contentflow-assistant__messages');
         this.form = element.querySelector('form');
+        this.expandButton = element.querySelector('[data-contentflow-expand]');
         this.history = this.restoreHistory();
 
         element.querySelector('.contentflow-assistant__toggle').addEventListener('click', () => this.open());
         element.querySelector('[data-contentflow-close]').addEventListener('click', () => this.close());
+        this.expandButton.addEventListener('click', () => this.toggleFullscreen());
         this.form.addEventListener('submit', (event) => this.submit(event));
         this.history.forEach((entry) => {
             this.addMessage(entry.content, entry.role, entry.products || [], entry.suggestions || []);
@@ -23,6 +25,23 @@ class ContentFlowAssistant {
 
     close() {
         this.panel.hidden = true;
+        this.panel.classList.remove('contentflow-assistant__panel--fullscreen');
+        this.expandButton.setAttribute('aria-pressed', 'false');
+        this.expandButton.setAttribute('aria-label', 'Auf Vollbild vergrößern');
+        document.body.classList.remove('contentflow-assistant-open-fullscreen');
+    }
+
+    toggleFullscreen() {
+        const fullscreen = this.panel.classList.toggle('contentflow-assistant__panel--fullscreen');
+        this.expandButton.setAttribute('aria-pressed', String(fullscreen));
+        this.expandButton.setAttribute(
+            'aria-label',
+            fullscreen ? 'Vollbild verkleinern' : 'Auf Vollbild vergrößern',
+        );
+        document.body.classList.toggle('contentflow-assistant-open-fullscreen', fullscreen);
+        window.requestAnimationFrame(() => {
+            this.messages.scrollTop = this.messages.scrollHeight;
+        });
     }
 
     async submit(event) {
