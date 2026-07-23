@@ -57,4 +57,4 @@ The shared ContentFlow API already exposes Shopware-scoped Asset Intelligence. I
 
 ## Asset credits
 
-The Storefront expand control uses the [Vergrößern icon from Flaticon](https://www.flaticon.com/de/kostenloses-icon/vergrossern_6469458).
+The Storefront expand control uses the [Maximieren icon from Flaticon](https://www.flaticon.com/de/kostenloses-icon/maximieren_4663147).

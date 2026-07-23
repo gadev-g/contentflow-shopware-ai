@@ -5,7 +5,7 @@
 .contentflow-assistant__toggle-icon { width: 21px; height: 21px; flex: 0 0 21px; fill: currentcolor; }
 .contentflow-assistant__panel { position: absolute; right: 0; bottom: 58px; display: flex; width: min(390px, calc(100vw - 32px)); overflow: hidden; flex-direction: column; background: #fff; border: 1px solid #dce6f2; border-radius: 16px; box-shadow: 0 24px 70px rgb(20 42 74 / 24%); }
 .contentflow-assistant__header { display: flex; gap: 10px; align-items: center; min-height: 64px; padding: 9px 10px 9px 12px; color: #fff; background: #243758; }
-.contentflow-assistant__title { display: flex; gap: 10px; align-items: center; min-width: 0; line-height: 1.25; text-align: left; }
+.contentflow-assistant__title { display: flex; gap: 10px; align-items: center; min-width: 0; font-size: 14px; line-height: 1.25; text-align: left; }
 .contentflow-assistant__title-badge { position: relative; display: inline-flex; width: 42px; height: 42px; overflow: hidden; flex: 0 0 42px; align-items: center; justify-content: center; color: #243758; background: #fff; border-radius: 50%; box-shadow: 0 4px 14px rgb(10 28 55 / 24%); }
 .contentflow-assistant__title-badge::after { position: absolute; top: -35%; bottom: -35%; left: -65%; width: 45%; content: ""; background: linear-gradient(90deg, transparent, rgb(40 124 239 / 32%), transparent); transform: rotate(20deg); animation: contentflow-assistant-polish 7s ease-in-out infinite; }
 .contentflow-assistant__title-icon { width: 22px; height: 22px; fill: currentcolor; }
