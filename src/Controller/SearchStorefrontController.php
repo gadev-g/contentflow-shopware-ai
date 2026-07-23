@@ -36,11 +36,16 @@ final readonly class SearchStorefrontController
 
         try {
             $data = $request->toArray();
+            $dialogLanguage = \is_string($data['language'] ?? null)
+                && 1 === preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/', $data['language'])
+                    ? $data['language']
+                    : $context->getLanguageInfo()->localeCode;
             $response = $this->client->post('/api/v1/integrations/shopware/assistant/messages', [
                 ...$data,
                 'session_id' => $request->getSession()->getId(),
                 'sales_channel_id' => $context->getSalesChannelId(),
-                'language' => $context->getLanguageId(),
+                'language' => $dialogLanguage,
+                'catalog_language' => $context->getLanguageId(),
                 'provider' => $this->client->provider(),
                 'model' => $this->client->model(),
             ]);

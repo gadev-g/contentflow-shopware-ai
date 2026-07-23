@@ -40,7 +40,11 @@ class ContentFlowAssistant {
             const response = await fetch('/contentflow/assistant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ message, history: this.history.slice(-10) }),
+                body: JSON.stringify({
+                    message,
+                    history: this.history.slice(-10),
+                    language: navigator.language,
+                }),
             });
             const data = await response.json();
 
@@ -126,6 +130,7 @@ class ContentFlowAssistant {
             body: JSON.stringify({
                 message: `Ja, ${title} in den Warenkorb legen`,
                 history: this.history.slice(-10),
+                language: navigator.language,
                 product_id: productId,
                 confirmed: true,
                 quantity: 1,
