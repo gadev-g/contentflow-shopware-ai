@@ -12,6 +12,8 @@ export default {
         return {
             selectedProducts: new EntityCollection('/product', 'product', Shopware.Context.api),
             selectedRuleProducts: new EntityCollection('/product', 'product', Shopware.Context.api),
+            selectedCategoryId: '',
+            selectedRuleCategoryId: '',
             availableLanguages: new EntityCollection('/language', 'language', Shopware.Context.api),
             sourceLanguageId: '',
             targetLanguageId: '',
@@ -43,8 +45,27 @@ export default {
             return this.repositoryFactory.create('product');
         },
         productCriteria() {
-            const criteria = new Criteria(1, 50);
+            const criteria = new Criteria(1, 500);
             criteria.addFilter(Criteria.equals('parentId', null));
+            if (this.selectedCategoryId) {
+                criteria.addFilter(Criteria.equals('categories.id', this.selectedCategoryId));
+            }
+            criteria.addSorting(Criteria.sort('name', 'ASC'));
+
+            return criteria;
+        },
+        ruleProductCriteria() {
+            const criteria = new Criteria(1, 500);
+            criteria.addFilter(Criteria.equals('parentId', null));
+            if (this.selectedRuleCategoryId) {
+                criteria.addFilter(Criteria.equals('categories.id', this.selectedRuleCategoryId));
+            }
+            criteria.addSorting(Criteria.sort('name', 'ASC'));
+
+            return criteria;
+        },
+        categoryCriteria() {
+            const criteria = new Criteria(1, 500);
             criteria.addSorting(Criteria.sort('name', 'ASC'));
 
             return criteria;
@@ -60,6 +81,12 @@ export default {
         targetLanguageId() {
             this.targetLanguage = this.localeCodeForLanguage(this.targetLanguageId, 'en');
             this.loadCoverage();
+        },
+        selectedCategoryId() {
+            this.selectedProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
+        },
+        selectedRuleCategoryId() {
+            this.selectedRuleProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
         },
     },
     created() {
@@ -366,6 +393,7 @@ export default {
         resetSearchRule() {
             this.searchRule = { name: '', type: 'pin', query: '', product_ids: [], priority: 100, active: true };
             this.searchRuleSynonyms = '';
+            this.selectedRuleCategoryId = '';
             this.selectedRuleProducts = new EntityCollection('/product', 'product', Shopware.Context.api);
         },
         jsonArray(value) {

@@ -34,13 +34,21 @@
             </sw-card>
 
             <sw-card title="1. Produkte und Sprachen auswählen" position-identifier="contentflow-selection">
+                <sw-entity-single-select
+                    v-model:value="selectedCategoryId"
+                    entity="category"
+                    label="Kategorie"
+                    label-property="name"
+                    :criteria="categoryCriteria"
+                    placeholder="Zuerst Kategorie auswählen" />
                 <sw-entity-multi-select
                     v-model:entity-collection="selectedProducts"
                     entity-name="product"
                     :criteria="productCriteria"
                     label-property="name"
+                    :disabled="!selectedCategoryId"
                     placeholder="Produkte auswählen" />
-                <p class="contentflow-field-hint">Es werden die vorhandenen Hauptprodukte angezeigt. Varianten werden über ihr Hauptprodukt verarbeitet.</p>
+                <p class="contentflow-field-hint">Nach Auswahl einer Kategorie werden deren Hauptprodukte angezeigt. Varianten werden über ihr Hauptprodukt verarbeitet.</p>
 
                 <div class="contentflow-language-grid">
                     <sw-entity-single-select
@@ -300,13 +308,23 @@
                             label="Synonyme"
                             help-text="Mehrere Begriffe mit Komma trennen"
                         />
+                        <sw-entity-single-select
+                            v-if="searchRule.type !== 'synonym'"
+                            v-model:value="selectedRuleCategoryId"
+                            entity="category"
+                            label="Kategorie für Produktauswahl"
+                            label-property="name"
+                            :criteria="categoryCriteria"
+                            placeholder="Zuerst Kategorie auswählen"
+                        />
                         <sw-entity-multi-select
-                            v-else
+                            v-if="searchRule.type !== 'synonym'"
                             v-model:entity-collection="selectedRuleProducts"
                             entity-name="product"
                             label="Produkte"
                             label-property="name"
-                            :criteria="productCriteria"
+                            :criteria="ruleProductCriteria"
+                            :disabled="!selectedRuleCategoryId"
                             placeholder="Produkte auswählen"
                         />
                     </div>
