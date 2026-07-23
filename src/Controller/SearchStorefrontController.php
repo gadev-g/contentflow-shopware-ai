@@ -95,7 +95,7 @@ final readonly class SearchStorefrontController
         }
 
         $criteria = new Criteria($ids);
-        $criteria->addAssociations(['cover.media', 'categories', 'manufacturer']);
+        $criteria->addAssociations(['cover.media', 'media.media', 'categories', 'manufacturer']);
         $availableProducts = $this->productRepository->search($criteria, $context)->getEntities();
         $currency = $context->getCurrency()->getIsoCode();
         $result = [];
@@ -115,7 +115,8 @@ final readonly class SearchStorefrontController
             $product['category'] = $category?->getTranslation('name') ?: ($product['category'] ?? '');
             $product['manufacturer'] = $availableProduct->getManufacturer()?->getTranslation('name')
                 ?: ($product['manufacturer'] ?? '');
-            $localImageUrl = $availableProduct->getCover()?->getMedia()?->getUrl();
+            $localImageUrl = $availableProduct->getCover()?->getMedia()?->getUrl()
+                ?: $availableProduct->getMedia()?->first()?->getMedia()?->getUrl();
             $syncedImageUrl = \is_array($product['attributes'] ?? null)
                 && \is_string($product['attributes']['_contentflow_image_url'] ?? null)
                     ? $product['attributes']['_contentflow_image_url']

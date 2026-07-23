@@ -71,6 +71,7 @@ final readonly class SearchCatalogSynchronizer
             ->addAssociation('manufacturer')
             ->addAssociation('categories')
             ->addAssociation('cover.media')
+            ->addAssociation('media.media')
             ->addAssociation('properties.group');
 
         return $criteria;
@@ -101,7 +102,8 @@ final readonly class SearchCatalogSynchronizer
                 $group = $property->getGroup();
                 $attributes[(string) ($group?->getTranslation('name') ?? 'Property')][] = (string) $property->getTranslation('name');
             }
-            $coverUrl = $product->getCover()?->getMedia()?->getUrl();
+            $coverUrl = $product->getCover()?->getMedia()?->getUrl()
+                ?: $product->getMedia()?->first()?->getMedia()?->getUrl();
             if (\is_string($coverUrl) && '' !== $coverUrl) {
                 $attributes['_contentflow_image_url'] = $coverUrl;
             }
