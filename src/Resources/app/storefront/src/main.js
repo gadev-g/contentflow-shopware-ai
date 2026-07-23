@@ -16,6 +16,9 @@ class ContentFlowAssistant {
 
     open() {
         this.panel.hidden = false;
+        window.requestAnimationFrame(() => {
+            this.messages.scrollTop = this.messages.scrollHeight;
+        });
     }
 
     close() {
