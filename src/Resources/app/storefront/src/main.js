@@ -226,22 +226,39 @@ class ContentFlowAssistant {
         const reply = document.createElement('div');
         reply.className = 'contentflow-assistant__reply';
         let list = null;
+        let parentItem = null;
 
         String(text).split(/\r?\n/).forEach((line) => {
-            const listItem = line.match(/^\s*[-•]\s+(.+)$/u);
+            const listItem = line.match(/^(\s*)[-•]\s+(.+)$/u);
 
             if (listItem) {
+                const nested = listItem[1].length > 0 && parentItem;
+                if (nested) {
+                    let nestedList = Array.from(parentItem.children)
+                        .find((child) => child.tagName === 'UL');
+                    if (!nestedList) {
+                        nestedList = document.createElement('ul');
+                        parentItem.appendChild(nestedList);
+                    }
+                    const item = document.createElement('li');
+                    this.appendReplyText(item, listItem[2], products);
+                    nestedList.appendChild(item);
+                    return;
+                }
+
                 if (!list) {
                     list = document.createElement('ul');
                     reply.appendChild(list);
                 }
                 const item = document.createElement('li');
-                this.appendReplyText(item, listItem[1], products);
+                this.appendReplyText(item, listItem[2], products);
                 list.appendChild(item);
+                parentItem = item;
                 return;
             }
 
             list = null;
+            parentItem = null;
             if (!line.trim()) {
                 return;
             }

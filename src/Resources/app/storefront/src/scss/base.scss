@@ -26,6 +26,8 @@
 .contentflow-assistant__reply p + p { margin-top: 6px; }
 .contentflow-assistant__reply ul { padding-left: 18px; margin: 8px 0 0; }
 .contentflow-assistant__reply li { padding-left: 2px; margin-top: 5px; }
+.contentflow-assistant__reply li > ul { padding-left: 16px; margin-top: 4px; }
+.contentflow-assistant__reply li > ul > li { margin-top: 3px; }
 .contentflow-assistant__reply strong { color: #173e72; font-weight: 800; }
 .contentflow-assistant__message--user .contentflow-assistant__message-content { display: block; }
 .contentflow-assistant__answer-icon { display: inline-flex; width: 30px; height: 30px; flex: 0 0 30px; align-items: center; justify-content: center; color: #287cef; background: #e5f0ff; border-radius: 50%; }
