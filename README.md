@@ -54,3 +54,7 @@ The same product selection can generate SEO titles, meta descriptions, keywords,
 ## Next product module
 
 The shared ContentFlow API already exposes Shopware-scoped Asset Intelligence. Its native media selector and write adapter are the next plugin increment; plan enforcement is already performed by the API and cannot be bypassed by enabling UI code locally.
+
+## Asset credits
+
+The Storefront expand control uses the [Vergrößern icon from Flaticon](https://www.flaticon.com/de/kostenloses-icon/vergrossern_6469458).
