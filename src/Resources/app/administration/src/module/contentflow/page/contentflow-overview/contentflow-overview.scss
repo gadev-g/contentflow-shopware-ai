@@ -63,28 +63,27 @@
     display: grid;
     grid-template-columns: minmax(260px, 1fr) 242px;
     align-items: end;
-    gap: 0;
+    column-gap: 20px;
     max-width: 100%;
     margin-top: 12px;
 }
 
-.contentflow-settings-row .mt-field {
+.contentflow-page .contentflow-settings-row .mt-field {
     margin-bottom: 0;
 }
 
-.contentflow-settings-row .sw-button {
-    width: 242px;
-    min-height: 60px;
-    justify-content: center;
-    margin-left: -1px;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-.contentflow-settings-row .mt-field__input,
-.contentflow-settings-row .mt-select__selection {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+.contentflow-page .contentflow-settings-row .sw-button {
+    width: 242px !important;
+    min-width: 242px !important;
+    max-width: 242px !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    max-height: 72px !important;
+    padding: 0 24px !important;
+    margin: 0 !important;
+    justify-content: center !important;
+    border-radius: var(--border-radius-default, 4px) !important;
+    box-sizing: border-box;
 }
 
 .contentflow-field-hint {
@@ -737,13 +736,13 @@
 @media (max-width: 900px) {
     .contentflow-settings-row {
         grid-template-columns: 1fr;
-        gap: 8px;
+        row-gap: 8px;
     }
 
-    .contentflow-settings-row .sw-button {
-        width: 100%;
-        margin-left: 0;
-        border-radius: var(--border-radius-default, 4px);
+    .contentflow-page .contentflow-settings-row .sw-button {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
     }
 
     .contentflow-feature-grid {
