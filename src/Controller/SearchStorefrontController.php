@@ -48,7 +48,7 @@ final readonly class SearchStorefrontController
                 'catalog_language' => $context->getLanguageId(),
                 'provider' => $this->client->provider(),
                 'model' => $this->client->model(),
-            ]);
+            ], 180.0);
             $response['products'] = $this->availableProducts($response['products'] ?? [], $context);
             $action = $response['cart_action'] ?? null;
 
