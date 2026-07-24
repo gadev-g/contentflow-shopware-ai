@@ -12,7 +12,7 @@ class ContentFlowAssistant {
         this.expandButton.addEventListener('click', () => this.toggleFullscreen());
         this.form.addEventListener('submit', (event) => this.submit(event));
         this.history.forEach((entry) => {
-            this.addMessage(entry.content, entry.role, entry.products || [], entry.suggestions || []);
+            this.addMessage(entry.content, entry.role, entry.products || [], entry.suggestions || [], entry.comparison || null);
         });
     }
 
@@ -76,12 +76,14 @@ class ContentFlowAssistant {
                 throw new Error(data.error?.message || 'Der Berater ist gerade nicht erreichbar.');
             }
 
-            this.addMessage(data.reply, 'assistant', data.products || [], data.suggestions || []);
+            this.addMessage(data.reply, 'assistant', data.products || [], data.suggestions || [], data.comparison || null);
             this.history.push({
                 role: 'assistant',
                 content: data.reply,
                 products: data.products || [],
                 suggestions: data.suggestions || [],
+                comparison: data.comparison || null,
+                type: data.type || 'product_results',
             });
             this.history = this.history.slice(-10);
             this.persistHistory();
@@ -120,7 +122,7 @@ class ContentFlowAssistant {
         this.form.querySelector('button[type="submit"]').disabled = busy;
     }
 
-    addMessage(text, role, products = [], suggestions = []) {
+    addMessage(text, role, products = [], suggestions = [], comparison = null) {
         const item = document.createElement('article');
         item.className = `contentflow-assistant__message contentflow-assistant__message--${role}`;
         const content = document.createElement('div');
@@ -132,6 +134,10 @@ class ContentFlowAssistant {
 
         content.appendChild(this.createReply(text, products));
         item.appendChild(content);
+
+        if (comparison && Array.isArray(comparison.products) && comparison.products.length) {
+            item.appendChild(this.createComparison(comparison));
+        }
 
         if (products.length) {
             const productGrid = document.createElement('div');
@@ -220,6 +226,48 @@ class ContentFlowAssistant {
 
         this.messages.appendChild(item);
         this.messages.scrollTop = this.messages.scrollHeight;
+    }
+
+    createComparison(comparison) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'contentflow-assistant__comparison';
+
+        comparison.products.forEach((product) => {
+            const section = document.createElement('section');
+            section.className = 'contentflow-assistant__comparison-product';
+            const title = document.createElement('strong');
+            title.className = 'contentflow-assistant__comparison-title';
+            title.textContent = product.name || 'Produkt';
+            section.appendChild(title);
+
+            const list = document.createElement('dl');
+            (comparison.criteria || []).forEach((criterion) => {
+                const label = document.createElement('dt');
+                label.textContent = criterion;
+                const value = document.createElement('dd');
+                value.textContent = product.values?.[criterion] ?? 'Keine Angabe';
+                if (product.values?.[criterion] == null) {
+                    value.classList.add('contentflow-assistant__comparison-missing');
+                }
+                list.appendChild(label);
+                list.appendChild(value);
+            });
+            section.appendChild(list);
+
+            if (Array.isArray(product.highlights) && product.highlights.length) {
+                const highlights = document.createElement('ul');
+                highlights.className = 'contentflow-assistant__comparison-highlights';
+                product.highlights.forEach((highlight) => {
+                    const item = document.createElement('li');
+                    item.textContent = highlight;
+                    highlights.appendChild(item);
+                });
+                section.appendChild(highlights);
+            }
+            wrapper.appendChild(section);
+        });
+
+        return wrapper;
     }
 
     createReply(text, products = []) {

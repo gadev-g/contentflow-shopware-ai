@@ -29,6 +29,14 @@
 .contentflow-assistant__reply li > ul { padding-left: 16px; margin-top: 4px; }
 .contentflow-assistant__reply li > ul > li { margin-top: 3px; }
 .contentflow-assistant__reply strong { color: #173e72; font-weight: 800; }
+.contentflow-assistant__comparison { display: grid; gap: 10px; margin: 12px 0 0 40px; }
+.contentflow-assistant__comparison-product { padding: 12px; background: #fff; border: 1px solid #cddff1; border-radius: 12px; }
+.contentflow-assistant__comparison-title { display: block; margin-bottom: 8px; color: #173e72; font-size: 13px; }
+.contentflow-assistant__comparison-product dl { display: grid; grid-template-columns: minmax(90px, .8fr) minmax(0, 1.2fr); gap: 5px 10px; margin: 0; font-size: 11px; }
+.contentflow-assistant__comparison-product dt { color: #61748e; font-weight: 700; }
+.contentflow-assistant__comparison-product dd { margin: 0; color: #243758; }
+.contentflow-assistant__comparison-missing { color: #8b98aa !important; font-style: italic; }
+.contentflow-assistant__comparison-highlights { padding-left: 17px; margin: 9px 0 0; color: #36506f; font-size: 11px; }
 .contentflow-assistant__message--user .contentflow-assistant__message-content { display: block; }
 .contentflow-assistant__answer-icon { display: inline-flex; width: 30px; height: 30px; flex: 0 0 30px; align-items: center; justify-content: center; color: #287cef; background: #e5f0ff; border-radius: 50%; }
 .contentflow-assistant__answer-icon svg { width: 16px; height: 16px; fill: currentcolor; }

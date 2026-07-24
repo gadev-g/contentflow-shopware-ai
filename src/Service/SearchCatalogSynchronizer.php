@@ -15,6 +15,7 @@ final readonly class SearchCatalogSynchronizer
     public function __construct(
         private ContentFlowClient $client,
         private EntityRepository $productRepository,
+        private EntityRepository $currencyRepository,
     ) {
     }
 
@@ -32,7 +33,7 @@ final readonly class SearchCatalogSynchronizer
             foreach (array_chunk($ids, self::BATCH_SIZE) as $idBatch) {
                 $criteria = $this->criteria($idBatch);
                 $products = $this->productRepository->search($criteria, $context);
-                $documents = $this->documents($products);
+                $documents = $this->documents($products, $context);
 
                 if ([] !== $documents) {
                     $saved += $this->sendBatch($documents, $salesChannelId, $language);
@@ -50,7 +51,7 @@ final readonly class SearchCatalogSynchronizer
             $criteria->setLimit(self::BATCH_SIZE);
             $criteria->setOffset($offset);
             $products = $this->productRepository->search($criteria, $context);
-            $documents = $this->documents($products);
+            $documents = $this->documents($products, $context);
 
             if ([] !== $documents) {
                 $saved += $this->sendBatch($documents, $salesChannelId, $language);
@@ -72,7 +73,9 @@ final readonly class SearchCatalogSynchronizer
             ->addAssociation('categories')
             ->addAssociation('cover.media')
             ->addAssociation('media.media')
-            ->addAssociation('properties.group');
+            ->addAssociation('properties.group')
+            ->addAssociation('children.options.group')
+            ->addAssociation('children.properties.group');
 
         return $criteria;
     }
@@ -81,9 +84,11 @@ final readonly class SearchCatalogSynchronizer
      * @param iterable<\Shopware\Core\Content\Product\ProductEntity> $products
      * @return list<array<string, mixed>>
      */
-    private function documents(iterable $products): array
+    private function documents(iterable $products, Context $context): array
     {
         $documents = [];
+        $currency = $this->currencyRepository->search(new Criteria([$context->getCurrencyId()]), $context)->first();
+        $currencyIso = (string) ($currency?->getIsoCode() ?? 'EUR');
 
         foreach ($products as $product) {
             if (null !== $product->getParentId()) {
@@ -102,6 +107,26 @@ final readonly class SearchCatalogSynchronizer
                 $group = $property->getGroup();
                 $attributes[(string) ($group?->getTranslation('name') ?? 'Property')][] = (string) $property->getTranslation('name');
             }
+            $technicalData = $attributes;
+            $customFields = \is_array($product->getCustomFields()) ? $product->getCustomFields() : [];
+            $variants = [];
+            foreach ($product->getChildren() ?? [] as $variant) {
+                $options = [];
+                foreach ($variant->getOptions() ?? [] as $option) {
+                    $options[(string) ($option->getGroup()?->getTranslation('name') ?? 'Option')] =
+                        (string) $option->getTranslation('name');
+                }
+                $variantPrice = $variant->getPrice()?->getCurrencyPrice($context->getCurrencyId());
+                $variants[] = [
+                    'id' => $variant->getId(),
+                    'name' => (string) $variant->getTranslation('name'),
+                    'product_number' => $variant->getProductNumber(),
+                    'options' => $options,
+                    'price' => $variantPrice?->getGross(),
+                    'active' => $variant->getActive(),
+                ];
+            }
+            $price = $product->getPrice()?->getCurrencyPrice($context->getCurrencyId());
             $coverUrl = $product->getCover()?->getMedia()?->getUrl()
                 ?: $product->getMedia()?->first()?->getMedia()?->getUrl();
             if (\is_string($coverUrl) && '' !== $coverUrl) {
@@ -117,6 +142,11 @@ final readonly class SearchCatalogSynchronizer
                 'product_number' => $product->getProductNumber(),
                 'keywords' => array_values(array_filter(array_map('trim', explode(',', (string) $product->getTranslation('keywords'))))),
                 'attributes' => $attributes,
+                'technical_data' => $technicalData,
+                'custom_fields' => $customFields,
+                'variants' => \array_slice($variants, 0, 50),
+                'price' => $price?->getGross(),
+                'currency' => $currencyIso,
                 'active' => $product->getActive(),
             ];
         }

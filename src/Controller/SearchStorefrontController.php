@@ -50,6 +50,7 @@ final readonly class SearchStorefrontController
                 'model' => $this->client->model(),
             ], 180.0);
             $response['products'] = $this->availableProducts($response['products'] ?? [], $context);
+            $response['comparison'] = $this->liveComparison($response['comparison'] ?? null, $response['products']);
             $action = $response['cart_action'] ?? null;
 
             if (
@@ -128,6 +129,35 @@ final readonly class SearchStorefrontController
         }
 
         return $result;
+    }
+
+    /**
+     * @param mixed $comparison
+     * @param list<array<string, mixed>> $products
+     * @return array<string, mixed>|null
+     */
+    private function liveComparison(mixed $comparison, array $products): ?array
+    {
+        if (!\is_array($comparison) || !\is_array($comparison['products'] ?? null)) {
+            return null;
+        }
+        $liveProducts = array_column($products, null, 'id');
+        $items = [];
+        foreach ($comparison['products'] as $item) {
+            if (!\is_array($item) || !\is_string($item['id'] ?? null) || !isset($liveProducts[$item['id']])) {
+                continue;
+            }
+            $live = $liveProducts[$item['id']];
+            $items[] = [
+                ...$item,
+                'name' => (string) ($live['title'] ?? $item['name'] ?? ''),
+                'price' => $live['price'] ?? null,
+                'currency' => (string) ($live['currency'] ?? $item['currency'] ?? ''),
+            ];
+        }
+        $comparison['products'] = $items;
+
+        return $comparison;
     }
 
     #[Route('/contentflow/search/event', name: 'frontend.contentflow.search.event', methods: ['POST'], defaults: ['XmlHttpRequest' => true])]
