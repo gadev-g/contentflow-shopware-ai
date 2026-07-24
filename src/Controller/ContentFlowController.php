@@ -45,6 +45,7 @@ final class ContentFlowController extends AbstractController
                 'context' => $result,
                 'provider' => $provider,
                 'providers' => $providers,
+                'model' => $this->client->model(),
             ]);
         } catch (\Throwable $exception) {
             return new JsonResponse(['connected' => false, 'message' => $exception->getMessage()], 422);
@@ -296,6 +297,44 @@ final class ContentFlowController extends AbstractController
         );
 
         return new JsonResponse($result, 202);
+    }
+
+    #[Route('/api/_action/contentflow/settings/models/{provider}', name: 'api.action.contentflow.settings.models', methods: ['GET'])]
+    public function models(string $provider): JsonResponse
+    {
+        try {
+            $result = $this->client->get('/api/v1/providers/' . rawurlencode($provider) . '/models');
+
+            return new JsonResponse(['items' => $result['items'] ?? []]);
+        } catch (\Throwable $exception) {
+            return new JsonResponse(['error' => ['message' => $exception->getMessage()]], 422);
+        }
+    }
+
+    #[Route('/api/_action/contentflow/settings/model', name: 'api.action.contentflow.settings.model', methods: ['POST'])]
+    public function saveModel(Request $request): JsonResponse
+    {
+        try {
+            $data = $request->toArray();
+            $provider = $this->client->provider();
+            $model = $data['model'] ?? null;
+            $result = $this->client->get('/api/v1/providers/' . rawurlencode($provider) . '/models');
+            $availableModels = [];
+            foreach ($result['items'] ?? [] as $item) {
+                if (\is_array($item) && \is_string($item['id'] ?? null)) {
+                    $availableModels[] = $item['id'];
+                }
+            }
+            if (!\is_string($model) || !\in_array($model, $availableModels, true)) {
+                return new JsonResponse(['error' => ['message' => 'Select an available model.']], 422);
+            }
+
+            $this->client->setModel($model);
+
+            return new JsonResponse(['saved' => true, 'model' => $model]);
+        } catch (\Throwable $exception) {
+            return new JsonResponse(['error' => ['message' => $exception->getMessage()]], 422);
+        }
     }
 
     #[Route('/api/_action/contentflow/search/analytics', name: 'api.action.contentflow.search.analytics', methods: ['GET'])]

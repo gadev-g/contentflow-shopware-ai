@@ -21,11 +21,15 @@ export default {
             targetLanguage: 'en',
             provider: '',
             providerOptions: [],
+            model: '',
+            modelOptions: [],
             preview: null,
             seoPreview: null,
             languagesLoading: false,
             providersLoading: false,
             providerSaving: false,
+            modelsLoading: false,
+            modelSaving: false,
             loading: false,
             seoLoading: false,
             saving: false,
@@ -120,6 +124,7 @@ export default {
                     label: this.providerLabel(provider),
                 }));
                 this.provider = response.data.provider || this.providerOptions[0]?.value || '';
+                await this.loadModels(response.data.model || '');
             } catch (error) {
                 this.createNotificationError({ message: error.response?.data?.message || 'Die ContentFlow-Provider konnten nicht geladen werden.' });
             } finally {
@@ -136,11 +141,60 @@ export default {
                     this.apiRequestConfig(),
                 );
                 this.createNotificationSuccess({ message: 'Der Standard-Provider wurde gespeichert.' });
+                this.model = '';
+                await this.loadModels();
             } catch (error) {
                 this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
             } finally {
                 this.providerSaving = false;
             }
+        },
+        async loadModels(preferredModel = '') {
+            this.modelsLoading = true;
+
+            try {
+                const response = await Shopware.Application.getContainer('init').httpClient.get(
+                    `/_action/contentflow/settings/models/${encodeURIComponent(this.provider)}`,
+                    this.apiRequestConfig(),
+                );
+                this.modelOptions = (response.data.items || []).map((model) => ({
+                    value: model.id,
+                    label: this.modelLabel(model),
+                }));
+                this.model = this.modelOptions.some((option) => option.value === preferredModel)
+                    ? preferredModel
+                    : (this.modelOptions[0]?.value || '');
+            } catch (error) {
+                this.modelOptions = [];
+                this.model = '';
+                this.createNotificationError({ message: error.response?.data?.error?.message || 'Die verfügbaren Modelle konnten nicht geladen werden.' });
+            } finally {
+                this.modelsLoading = false;
+            }
+        },
+        async saveModel() {
+            this.modelSaving = true;
+
+            try {
+                await Shopware.Application.getContainer('init').httpClient.post(
+                    '/_action/contentflow/settings/model',
+                    { model: this.model },
+                    this.apiRequestConfig(),
+                );
+                this.createNotificationSuccess({ message: 'Das Standard-Modell wurde gespeichert.' });
+            } catch (error) {
+                this.createNotificationError({ message: error.response?.data?.error?.message || error.message });
+            } finally {
+                this.modelSaving = false;
+            }
+        },
+        modelLabel(model) {
+            const details = [model.parameter_size];
+            if (Number(model.size) > 0) {
+                details.push(`${(Number(model.size) / (1024 ** 3)).toFixed(1)} GB`);
+            }
+
+            return details.filter(Boolean).length ? `${model.id} (${details.filter(Boolean).join(', ')})` : model.id;
         },
         providerLabel(provider) {
             return {

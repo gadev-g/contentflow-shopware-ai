@@ -30,7 +30,23 @@
                         Provider speichern
                     </sw-button-process>
                 </div>
+                <div class="contentflow-settings-row">
+                    <mt-select
+                        v-model="model"
+                        label="Standard-Modell"
+                        placeholder="Verfügbares Modell auswählen"
+                        :options="modelOptions"
+                        :disabled="modelsLoading || modelOptions.length === 0" />
+                    <sw-button-process
+                        variant="primary"
+                        :is-loading="modelSaving"
+                        :disabled="!model || modelsLoading || modelSaving"
+                        @click="saveModel">
+                        Modell speichern
+                    </sw-button-process>
+                </div>
                 <p class="contentflow-field-hint">Es werden nur Provider angezeigt, die für das verbundene ContentFlow-Projekt aktiviert sind.</p>
+                <p class="contentflow-field-hint">Die Modellliste wird direkt vom verbundenen Provider geladen. Bei Ollama werden nur tatsächlich installierte Modelle angeboten.</p>
             </sw-card>
 
             <sw-card title="1. Produkte und Sprachen auswählen" position-identifier="contentflow-selection">

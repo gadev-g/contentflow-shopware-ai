@@ -122,6 +122,11 @@ final readonly class ContentFlowClient
         return '' === $model ? null : $model;
     }
 
+    public function setModel(?string $model): void
+    {
+        $this->configuration->set(self::CONFIG_PREFIX . 'model', null === $model ? '' : trim($model));
+    }
+
     public function searchEnabled(): bool
     {
         return true === $this->configuration->get(self::CONFIG_PREFIX . 'searchEnabled');
