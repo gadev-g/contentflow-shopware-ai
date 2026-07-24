@@ -1,6 +1,6 @@
 {
   "main.js": {
-    "file": "assets/content-flow-shopware-ai-D5ni_OzA.js",
+    "file": "assets/content-flow-shopware-ai-BQef1YCt.js",
     "name": "content-flow-shopware-ai",
     "src": "main.js",
     "isEntry": true,
@@ -9,12 +9,12 @@
     ]
   },
   "module/contentflow/page/contentflow-overview/index.js": {
-    "file": "assets/index-LJteDq9D.js",
+    "file": "assets/index-BhHYEvim.js",
     "name": "index",
     "src": "module/contentflow/page/contentflow-overview/index.js",
     "isDynamicEntry": true,
     "css": [
-      "assets/index-CmXNRjy_.css"
+      "assets/index-D0lBSUyt.css"
     ]
   }
 }
