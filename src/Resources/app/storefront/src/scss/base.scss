@@ -12,7 +12,9 @@
 .contentflow-assistant__header-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; margin-left: auto; }
 .contentflow-assistant__header button { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; padding: 0; color: #fff; background: none; border: 0; border-radius: 8px; font-size: 24px; line-height: 1; }
 .contentflow-assistant__header button:hover { background: rgb(255 255 255 / 12%); }
+.contentflow-assistant__header button:disabled { cursor: not-allowed; opacity: .42; }
 .contentflow-assistant__header button img { width: 18px; height: 18px; object-fit: contain; filter: invert(1); }
+.contentflow-assistant__header button svg { width: 18px; height: 18px; fill: currentcolor; }
 .contentflow-assistant__panel--fullscreen { position: fixed; z-index: 1060; top: 50%; left: 50%; width: min(800px, calc(100vw - 36px)); min-width: min(390px, calc(100vw - 36px)); max-width: calc(100vw - 36px); height: min(760px, calc(100dvh - 36px)); min-height: 420px; max-height: calc(100dvh - 36px); border: 1px solid #dce6f2; border-radius: 22px; box-shadow: 0 30px 100px rgb(8 24 48 / 36%); resize: both; transform: translate(-50%, -50%); }
 .contentflow-assistant__panel--fullscreen .contentflow-assistant__messages { max-height: none; flex: 1; }
 .contentflow-assistant__panel--fullscreen .contentflow-assistant__products { grid-template-columns: repeat(2, minmax(0, 1fr)); }

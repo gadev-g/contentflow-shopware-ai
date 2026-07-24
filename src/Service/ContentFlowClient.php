@@ -77,8 +77,10 @@ final readonly class ContentFlowClient
         return $result;
     }
 
-    /** @return array<string, mixed> */
-    public function delete(string $path): array
+    /** @param array<string, mixed> $payload
+     *  @return array<string, mixed>
+     */
+    public function delete(string $path, array $payload = []): array
     {
         $apiUrl = rtrim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiUrl'), '/');
         $apiKey = trim((string) $this->configuration->get(self::CONFIG_PREFIX . 'apiKey'));
@@ -92,6 +94,7 @@ final readonly class ContentFlowClient
                 'Accept' => 'application/json',
                 'X-API-Key' => $apiKey,
             ],
+            'json' => $payload,
         ]);
 
         /** @var array<string, mixed> $result */

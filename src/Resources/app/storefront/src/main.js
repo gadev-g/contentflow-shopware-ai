@@ -1,19 +1,27 @@
 class ContentFlowAssistant {
+    static HISTORY_KEY = 'contentflowAssistantHistory';
+    static HISTORY_LIFETIME = 2 * 60 * 60 * 1000;
+
     constructor(element) {
         this.element = element;
         this.panel = element.querySelector('.contentflow-assistant__panel');
         this.messages = element.querySelector('.contentflow-assistant__messages');
         this.form = element.querySelector('form');
         this.expandButton = element.querySelector('[data-contentflow-expand]');
+        this.clearButton = element.querySelector('[data-contentflow-clear]');
+        this.expiryTimer = null;
         this.history = this.restoreHistory();
 
         element.querySelector('.contentflow-assistant__toggle').addEventListener('click', () => this.open());
         element.querySelector('[data-contentflow-close]').addEventListener('click', () => this.close());
+        this.clearButton.addEventListener('click', () => this.clearConversation());
         this.expandButton.addEventListener('click', () => this.toggleFullscreen());
         this.form.addEventListener('submit', (event) => this.submit(event));
         this.history.forEach((entry) => {
             this.addMessage(entry.content, entry.role, entry.products || [], entry.suggestions || [], entry.comparison || null);
         });
+        this.updateClearButton();
+        this.scheduleExpiry();
     }
 
     open() {
@@ -120,6 +128,63 @@ class ContentFlowAssistant {
         this.form.setAttribute('aria-busy', String(busy));
         this.form.elements.message.disabled = busy;
         this.form.querySelector('button[type="submit"]').disabled = busy;
+        this.clearButton.disabled = busy || this.history.length === 0;
+    }
+
+    async clearConversation(askConfirmation = true) {
+        if (
+            askConfirmation
+            && this.history.length > 0
+            && !window.confirm('Möchtest du die gesamte Konversation löschen?')
+        ) {
+            return;
+        }
+
+        this.clearButton.disabled = true;
+        try {
+            const response = await fetch('/contentflow/assistant', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ language: navigator.language }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Die Konversation konnte nicht gelöscht werden.');
+            }
+        } catch (error) {
+            if (askConfirmation) {
+                this.addMessage(error.message, 'assistant');
+                this.updateClearButton();
+                return;
+            }
+        }
+
+        this.history = [];
+        this.historyUpdatedAt = 0;
+        window.clearTimeout(this.expiryTimer);
+        sessionStorage.removeItem(ContentFlowAssistant.HISTORY_KEY);
+        this.messages.replaceChildren();
+        if (askConfirmation) {
+            this.addMessage('Die Konversation wurde gelöscht. Womit kann ich dir helfen?', 'assistant');
+        }
+        this.updateClearButton();
+    }
+
+    updateClearButton() {
+        this.clearButton.disabled = this.history.length === 0;
+    }
+
+    scheduleExpiry() {
+        window.clearTimeout(this.expiryTimer);
+        if (!this.historyUpdatedAt || this.history.length === 0) {
+            return;
+        }
+        const remaining = ContentFlowAssistant.HISTORY_LIFETIME - (Date.now() - this.historyUpdatedAt);
+        if (remaining <= 0) {
+            this.clearConversation(false);
+            return;
+        }
+        this.expiryTimer = window.setTimeout(() => this.clearConversation(false), remaining);
     }
 
     addMessage(text, role, products = [], suggestions = [], comparison = null) {
@@ -394,16 +459,35 @@ class ContentFlowAssistant {
 
     restoreHistory() {
         try {
-            const history = JSON.parse(sessionStorage.getItem('contentflowAssistantHistory') || '[]');
+            const stored = JSON.parse(sessionStorage.getItem(ContentFlowAssistant.HISTORY_KEY) || 'null');
+            if (
+                !stored
+                || !Array.isArray(stored.entries)
+                || !Number.isFinite(Number(stored.updatedAt))
+                || Date.now() - Number(stored.updatedAt) >= ContentFlowAssistant.HISTORY_LIFETIME
+            ) {
+                sessionStorage.removeItem(ContentFlowAssistant.HISTORY_KEY);
+                this.historyUpdatedAt = 0;
+                return [];
+            }
+            this.historyUpdatedAt = Number(stored.updatedAt);
 
-            return Array.isArray(history) ? history.slice(-10) : [];
+            return stored.entries.slice(-10);
         } catch (error) {
+            sessionStorage.removeItem(ContentFlowAssistant.HISTORY_KEY);
+            this.historyUpdatedAt = 0;
             return [];
         }
     }
 
     persistHistory() {
-        sessionStorage.setItem('contentflowAssistantHistory', JSON.stringify(this.history.slice(-10)));
+        this.historyUpdatedAt = Date.now();
+        sessionStorage.setItem(ContentFlowAssistant.HISTORY_KEY, JSON.stringify({
+            updatedAt: this.historyUpdatedAt,
+            entries: this.history.slice(-10),
+        }));
+        this.updateClearButton();
+        this.scheduleExpiry();
     }
 }
 

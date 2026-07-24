@@ -88,6 +88,26 @@ final readonly class SearchStorefrontController
         }
     }
 
+    #[Route('/contentflow/assistant', name: 'frontend.contentflow.assistant.clear', methods: ['DELETE'], defaults: ['XmlHttpRequest' => true])]
+    public function clearAssistant(Request $request, SalesChannelContext $context): JsonResponse
+    {
+        try {
+            $data = $request->toArray();
+            $dialogLanguage = \is_string($data['language'] ?? null)
+                && 1 === preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/', $data['language'])
+                    ? $data['language']
+                    : $context->getLanguageInfo()->localeCode;
+
+            return new JsonResponse($this->client->delete('/api/v1/integrations/shopware/assistant/messages', [
+                'session_id' => $request->getSession()->getId(),
+                'sales_channel_id' => $context->getSalesChannelId(),
+                'language' => $dialogLanguage,
+            ]));
+        } catch (\Throwable $exception) {
+            return new JsonResponse(['error' => ['message' => $exception->getMessage()]], 502);
+        }
+    }
+
     /**
      * @param mixed $products
      *
