@@ -74,7 +74,9 @@ final readonly class SearchCatalogSynchronizer
             ->addAssociation('cover.media')
             ->addAssociation('media.media')
             ->addAssociation('properties.group')
+            ->addAssociation('prices')
             ->addAssociation('children.options.group')
+            ->addAssociation('children.prices')
             ->addAssociation('children.properties.group');
 
         return $criteria;
@@ -116,17 +118,15 @@ final readonly class SearchCatalogSynchronizer
                     $options[(string) ($option->getGroup()?->getTranslation('name') ?? 'Option')] =
                         (string) $option->getTranslation('name');
                 }
-                $variantPrice = $variant->getPrice()?->getCurrencyPrice($context->getCurrencyId());
                 $variants[] = [
                     'id' => $variant->getId(),
                     'name' => (string) $variant->getTranslation('name'),
                     'product_number' => $variant->getProductNumber(),
                     'options' => $options,
-                    'price' => $variantPrice?->getGross(),
+                    'price' => $this->lowestCatalogPrice($variant, $context),
                     'active' => $variant->getActive(),
                 ];
             }
-            $price = $product->getPrice()?->getCurrencyPrice($context->getCurrencyId());
             $coverUrl = $product->getCover()?->getMedia()?->getUrl()
                 ?: $product->getMedia()?->first()?->getMedia()?->getUrl();
             if (\is_string($coverUrl) && '' !== $coverUrl) {
@@ -145,13 +145,32 @@ final readonly class SearchCatalogSynchronizer
                 'technical_data' => $technicalData,
                 'custom_fields' => $customFields,
                 'variants' => \array_slice($variants, 0, 50),
-                'price' => $price?->getGross(),
+                'price' => $this->lowestCatalogPrice($product, $context),
                 'currency' => $currencyIso,
                 'active' => $product->getActive(),
             ];
         }
 
         return $documents;
+    }
+
+    private function lowestCatalogPrice(
+        \Shopware\Core\Content\Product\ProductEntity $product,
+        Context $context,
+    ): ?float {
+        $prices = [];
+        $basePrice = $product->getPrice()?->getCurrencyPrice($context->getCurrencyId());
+        if (null !== $basePrice) {
+            $prices[] = $basePrice->getGross();
+        }
+        foreach ($product->getPrices() ?? [] as $rulePrice) {
+            $price = $rulePrice->getPrice()->getCurrencyPrice($context->getCurrencyId());
+            if (null !== $price) {
+                $prices[] = $price->getGross();
+            }
+        }
+
+        return [] === $prices ? null : min($prices);
     }
 
     /** @param list<array<string, mixed>> $documents */

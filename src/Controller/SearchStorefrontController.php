@@ -49,7 +49,21 @@ final readonly class SearchStorefrontController
                 'provider' => $this->client->provider(),
                 'model' => $this->client->model(),
             ], 180.0);
-            $response['products'] = $this->availableProducts($response['products'] ?? [], $context);
+            $liveProducts = $this->availableProducts($response['products'] ?? [], $context);
+            $response['products'] = $this->filterByLivePrice(
+                $liveProducts,
+                $response['meta']['filters'] ?? [],
+            );
+            if ([] !== $liveProducts && [] === $response['products']) {
+                $reply = str_starts_with(mb_strtolower($dialogLanguage), 'de')
+                    ? 'In dieser Preisspanne habe ich nach Prüfung der aktuellen Shoppreise keine passenden Produkte gefunden. Soll ich die Preisspanne erweitern?'
+                    : 'After checking the current shop prices, I found no matching products in this price range. Should I widen the range?';
+                $response['reply'] = $reply;
+                $response['message'] = $reply;
+                $response['type'] = 'clarification';
+                $response['needs_clarification'] = true;
+                $response['suggestions'] = [];
+            }
             $response['comparison'] = $this->liveComparison($response['comparison'] ?? null, $response['products']);
             $action = $response['cart_action'] ?? null;
 
@@ -129,6 +143,36 @@ final readonly class SearchStorefrontController
         }
 
         return $result;
+    }
+
+    /**
+     * Revalidate hard price constraints against calculated Storefront prices.
+     * The search index can briefly lag behind rule or currency price changes.
+     *
+     * @param list<array<string, mixed>> $products
+     * @param mixed                      $filters
+     * @return list<array<string, mixed>>
+     */
+    private function filterByLivePrice(array $products, mixed $filters): array
+    {
+        if (!\is_array($filters)) {
+            return $products;
+        }
+        $minimum = is_numeric($filters['price_min'] ?? null) ? (float) $filters['price_min'] : null;
+        $maximum = is_numeric($filters['price_max'] ?? null) ? (float) $filters['price_max'] : null;
+        if (null === $minimum && null === $maximum) {
+            return $products;
+        }
+
+        return array_values(array_filter($products, static function (array $product) use ($minimum, $maximum): bool {
+            if (!is_numeric($product['price'] ?? null)) {
+                return false;
+            }
+            $price = (float) $product['price'];
+
+            return (null === $minimum || $price >= $minimum)
+                && (null === $maximum || $price <= $maximum);
+        }));
     }
 
     /**
