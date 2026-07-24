@@ -61,13 +61,30 @@
 
 .contentflow-settings-row {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) auto;
+    grid-template-columns: minmax(260px, 1fr) 242px;
     align-items: end;
-    gap: 16px;
+    gap: 0;
+    max-width: 100%;
+    margin-top: 12px;
 }
 
 .contentflow-settings-row .mt-field {
     margin-bottom: 0;
+}
+
+.contentflow-settings-row .sw-button {
+    width: 242px;
+    min-height: 60px;
+    justify-content: center;
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.contentflow-settings-row .mt-field__input,
+.contentflow-settings-row .mt-select__selection {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .contentflow-field-hint {
@@ -720,6 +737,13 @@
 @media (max-width: 900px) {
     .contentflow-settings-row {
         grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .contentflow-settings-row .sw-button {
+        width: 100%;
+        margin-left: 0;
+        border-radius: var(--border-radius-default, 4px);
     }
 
     .contentflow-feature-grid {
