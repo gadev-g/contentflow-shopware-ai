@@ -72,7 +72,8 @@
     margin-bottom: 0;
 }
 
-.contentflow-page .contentflow-settings-row .sw-button {
+.contentflow-page .contentflow-settings-row > .mt-button,
+.contentflow-page .contentflow-settings-row > .sw-button {
     width: 242px !important;
     min-width: 242px !important;
     max-width: 242px !important;
@@ -739,7 +740,8 @@
         row-gap: 8px;
     }
 
-    .contentflow-page .contentflow-settings-row .sw-button {
+    .contentflow-page .contentflow-settings-row > .mt-button,
+    .contentflow-page .contentflow-settings-row > .sw-button {
         width: 100% !important;
         min-width: 100% !important;
         max-width: 100% !important;
