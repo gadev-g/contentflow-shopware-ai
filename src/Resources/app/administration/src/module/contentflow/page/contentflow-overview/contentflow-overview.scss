@@ -62,7 +62,7 @@
 .contentflow-settings-row {
     display: grid;
     grid-template-columns: minmax(260px, 1fr) 242px;
-    align-items: end;
+    align-items: center;
     column-gap: 20px;
     max-width: 100%;
     margin-top: 12px;
@@ -80,7 +80,7 @@
     min-height: 72px !important;
     max-height: 72px !important;
     padding: 0 24px !important;
-    margin: 0 !important;
+    margin: 20px 0 0 !important;
     justify-content: center !important;
     border-radius: var(--border-radius-default, 4px) !important;
     box-sizing: border-box;
@@ -743,6 +743,7 @@
         width: 100% !important;
         min-width: 100% !important;
         max-width: 100% !important;
+        margin-top: 0 !important;
     }
 
     .contentflow-feature-grid {
